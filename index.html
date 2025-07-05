@@ -44,41 +44,60 @@
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
   <script>
-    // *** ส่วนที่คุณต้องแก้ไข/เพิ่มโค้ดคือบรรทัดด้านล่างนี้ ***
-    const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRvcrOwNXXon7ub2437NZh70H6rkwxqBeS_x1QHJtzFHiS3EJ9Qk9ClY2p6GLzy2kNanEzK_MIyJW0T/pub?gid=1224553793&single=true&output=csv" + "&t=" + new Date().getTime();
-    // ******************************************************
+    let dataTableInitialized = false; // Flag to check if DataTable is initialized
 
-    fetch(csvUrl)
-      .then(r => r.text())
-      .then(text => {
-        const data = Papa.parse(text, { header: true }).data;
-        const tbody = document.querySelector("#statusTable tbody");
+    // ฟังก์ชันสำหรับโหลดและอัปเดตข้อมูลในตาราง
+    function loadData() {
+      // เพิ่ม Timestamp เพื่อป้องกันการแคช (Cache-Busting)
+      const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRvcrOwNXXon7ub2437NZh70H6rkwxqBeS_x1QHJtzFHiS3EJ9Qk9ClY2p6GLzy2kNanEzK_MIyJW0T/pub?gid=1224553793&single=true&output=csv&t=" + new Date().getTime();
 
-        data.forEach(r => {
-          const t = r["ประทับเวลา"]?.trim(),
-                m = r["ชื่อเครื่องจักรตามสัญญาฯโครงการของท่าน"]?.trim(),
-                a = r["โปรดเลือกรายการที่จะดำเนินการ"]?.trim(),
-                s = r["สถานะงาน"]?.trim();
-          if (t && m && a && s) {
-            const tr = document.createElement("tr");
-            tr.className = "status-" + s;
-            tr.innerHTML = `<td>${t}</td><td>${m}</td><td>${a}</td><td>${s}</td>`;
-            tbody.appendChild(tr);
-          }
-        });
+      fetch(csvUrl)
+        .then(r => r.text())
+        .then(text => {
+          const data = Papa.parse(text, { header: true }).data;
+          let table = $('#statusTable').DataTable();
 
-        $('#statusTable').DataTable({
-          dom: 'Bfrtip',
-          buttons: ['excelHtml5'],
-          language: {
-            search: "ค้นหา:", lengthMenu: "แสดง _MENU_ แถว",
-            info: "แสดง _START_ ถึง _END_ จาก _TOTAL_ แถว",
-            zeroRecords: "ไม่พบข้อมูล",
-            paginate: { first: "หน้าแรก", last: "หน้าสุดท้าย", next: "ถัดไป", previous: "ก่อนหน้า" }
-          }
-        });
-      })
-      .catch(err => console.error("เกิดข้อผิดพลาดดึงข้อมูล CSV:", err));
+          // เคลียร์ข้อมูลเก่าในตาราง DataTables
+          table.clear();
+
+          // เพิ่มข้อมูลใหม่ลงในตาราง DataTables
+          data.forEach(r => {
+            const t = r["ประทับเวลา"]?.trim(),
+                  m = r["ชื่อเครื่องจักรตามสัญญาฯโครงการของท่าน"]?.trim(),
+                  a = r["โปรดเลือกรายการที่จะดำเนินการ"]?.trim(),
+                  s = r["สถานะงาน"]?.trim();
+            if (t && m && a && s) {
+              const rowNode = table.row.add([t, m, a, s]).node();
+              $(rowNode).addClass("status-" + s); // เพิ่ม class สำหรับสีตามสถานะ
+            }
+          });
+          
+          // วาดตารางใหม่ให้แสดงผล
+          table.draw();
+        })
+        .catch(err => console.error("เกิดข้อผิดพลาดดึงข้อมูล CSV:", err));
+    }
+
+    // เมื่อเอกสาร HTML โหลดเสร็จสมบูรณ์
+    $(document).ready(function() {
+      // กำหนด DataTables ครั้งแรก
+      $('#statusTable').DataTable({
+        dom: 'Bfrtip',
+        buttons: ['excelHtml5'],
+        language: {
+          search: "ค้นหา:", lengthMenu: "แสดง _MENU_ แถว",
+          info: "แสดง _START_ ถึง _END_ จาก _TOTAL_ แถว",
+          zeroRecords: "ไม่พบข้อมูล",
+          paginate: { first: "หน้าแรก", last: "หน้าสุดท้าย", next: "ถัดไป", previous: "ก่อนหน้า" }
+        }
+      });
+
+      // เรียกใช้ฟังก์ชัน loadData เพื่อโหลดข้อมูลครั้งแรก
+      loadData(); 
+      
+      // กำหนดให้โหลดข้อมูลใหม่ทุกๆ 5 นาที (300000 มิลลิวินาที = 5 * 60 * 1000)
+      setInterval(loadData, 300000); 
+    });
   </script>
 </body>
 </html>
