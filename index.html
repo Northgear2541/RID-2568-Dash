@@ -161,14 +161,11 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <script>
-        // --- ★★★ CSV URL ที่ถูกต้อง ★★★ ---
         const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRvcrOwNXXon7ub2437NZh70H6rkwxqBeS_x1QHJtzFHiS3EJ9Qk9ClY2p6GLzy2kNanEzK_MIyJW0T/pub?gid=1224553793&single=true&output=csv';
-        // ------------------------------------
 
         let rawData = [];
-        let loadingMessage, errorMessage; // ประกาศตัวแปรนอกฟังก์ชันเพื่อให้เข้าถึงได้ทั่วถึง
+        let loadingMessage, errorMessage; // ประกาศตัวแปรเพื่อให้เข้าถึงได้ทั่วถึง
 
-        // Function สำหรับกำหนดสีของสถานะ
         function getStatusClass(status) {
             const normalizedStatus = (status || '').trim();
             const statusList = normalizedStatus.split(',').map(s => s.trim());
@@ -184,27 +181,24 @@
             return 'status-default';
         }
 
-        // Function สำหรับสร้างตารางจากข้อมูลที่กรองแล้ว
         function buildTable(dataToDisplay, headersToShow) {
             const tableContainer = document.getElementById('task-table-container');
 
-            // ซ่อนข้อความ loading เสมอเมื่อเรียก buildTable
-            if (loadingMessage) { // ตรวจสอบว่า Element มีอยู่จริง
+            if (loadingMessage) {
                 loadingMessage.style.display = 'none';
             }
 
             if (dataToDisplay.length === 0 || !headersToShow.length) {
-                if (errorMessage) { // ตรวจสอบว่า Element มีอยู่จริง
+                if (errorMessage) {
                     errorMessage.textContent = 'ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา หรือข้อมูลในไฟล์ว่างเปล่า';
                     errorMessage.style.display = 'block';
                     errorMessage.style.color = 'orange';
                 }
-                tableContainer.querySelector('table')?.remove(); // ลบตารางเดิมถ้ามี
+                tableContainer.querySelector('table')?.remove();
                 return;
             }
 
-            // ซ่อนข้อความ error หากมีข้อมูล
-            if (errorMessage) { // ตรวจสอบว่า Element มีอยู่จริง
+            if (errorMessage) {
                 errorMessage.style.display = 'none';
             }
 
@@ -234,7 +228,6 @@
             tableContainer.innerHTML += tableHtml;
         }
 
-        // Function สำหรับค้นหาข้อมูลแบบคำคล้าย
         function filterTable() {
             const searchTerm = document.getElementById('search-input').value.trim().toLowerCase();
             const filteredData = [];
@@ -276,7 +269,6 @@
             buildTable(filteredData, getHeadersToShow());
         }
 
-        // ฟังก์ชันเพื่อกำหนด Header ที่จะแสดงในตาราง
         function getHeadersToShow() {
             const desiredHeaders = [
                 'ประทับเวลา',
@@ -287,9 +279,9 @@
             return desiredHeaders;
         }
 
-        // *** นี่คือส่วนสำคัญที่แก้ไข: รอให้ DOM โหลดเสร็จก่อนเริ่ม PapaParse ***
+        // *** ย้ายโค้ดทั้งหมดมาไว้ใน DOMContentLoaded ***
         document.addEventListener('DOMContentLoaded', () => {
-            // ดึง Element มาเก็บไว้ในตัวแปรที่ประกาศไว้ข้างนอก
+            // ดึง Element มาเก็บไว้ในตัวแปร หลัง DOM โหลดเสร็จเท่านั้น
             loadingMessage = document.getElementById('loading');
             errorMessage = document.getElementById('error-message');
 
@@ -298,10 +290,10 @@
                 header: true,
                 skipEmptyLines: true,
                 complete: function(results) {
-                    console.log("PapaParse Results:", results); //
+                    console.log("PapaParse Results:", results);
                     rawData = results.data;
 
-                    if (loadingMessage) loadingMessage.style.display = 'none'; //
+                    if (loadingMessage) loadingMessage.style.display = 'none';
 
                     if (rawData.length === 0 || !results.meta.fields || results.meta.fields.length === 0) {
                         if (errorMessage) {
