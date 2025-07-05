@@ -45,15 +45,13 @@
             box-sizing: border-box;
         }
 
-        /* NEW STYLE: สำหรับคำแนะนำใต้ช่องค้นหา */
         #search-hint {
-            display: block; /* ทำให้ขึ้นบรรทัดใหม่ */
-            margin-top: 5px; /* เว้นระยะห่างด้านบน */
-            font-size: 0.8em; /* ทำให้ตัวอักษรเล็กลง */
-            color: #777; /* สีเทาอ่อน */
+            display: block;
+            margin-top: 5px;
+            font-size: 0.8em;
+            color: #777;
         }
 
-        /* Initial state of messages, will be managed by JS */
         #loading {
             text-align: center;
             font-size: 1.2em;
@@ -66,7 +64,7 @@
             font-size: 1.1em;
             padding: 20px;
             color: red;
-            display: none; /* Initially hidden */
+            display: none;
         }
 
         table {
@@ -113,14 +111,14 @@
             white-space: nowrap;
         }
 
-        .status-completed { background-color: #27ae60; } /* เสร็จสิ้น */
-        .status-in-progress { background-color: #2980b9; } /* กำลังดำเนินการ */
-        .status-pending { background-color: #f39c12; }    /* รอตรวจสอบ */
-        .status-reviewed { background-color: #1abc9c; }   /* ตรวจสอบแล้ว */
-        .status-not-passed { background-color: #e74c3c; } /* ตรวจสอบไม่ผ่าน - NEW! */
-        .status-cancelled { background-color: #c0392b; }  /* ยกเลิก */
-        .status-not-started { background-color: #7f8c8d; } /* ยังไม่เริ่ม */
-        .status-default { background-color: #bdc3c7; } /* สำหรับสถานะที่ไม่รู้จัก หรือสถานะหลายรายการที่ไม่เข้าเงื่อนไข */
+        .status-completed { background-color: #27ae60; }
+        .status-in-progress { background-color: #2980b9; }
+        .status-pending { background-color: #f39c12; }
+        .status-reviewed { background-color: #1abc9c; }
+        .status-not-passed { background-color: #e74c3c; }
+        .status-cancelled { background-color: #c0392b; }
+        .status-not-started { background-color: #7f8c8d; }
+        .status-default { background-color: #bdc3c7; }
 
         @media (max-width: 768px) {
             body {
@@ -162,16 +160,14 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <script>
-        // --- ★★★ ใส่ URL ของ CSV ที่คุณเผยแพร่ไว้ตรงนี้ ★★★ ---
+        // --- ★★★ URL อัปเดตแล้ว! ★★★ ---
         const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRvcrOwNXXon7ub2437NZh70H6rkwxqBeS_x1QHJtzFHiS3EJ9Qk9ClY2p6GLzy2kNanEzK_MIyJW0T/pub?gid=1224553793&single=true&output=csv';
-        // ---------------------------------------------------------
+        // ------------------------------------
 
-        let rawData = []; // เก็บข้อมูลดิบที่ได้จาก PapaParse ไว้สำหรับการกรอง
+        let rawData = [];
 
-        // Function สำหรับกำหนดสีของสถานะ
         function getStatusClass(status) {
             const normalizedStatus = (status || '').trim();
-
             const statusList = normalizedStatus.split(',').map(s => s.trim());
 
             if (statusList.includes('เสร็จสิ้น')) return 'status-completed';
@@ -185,7 +181,6 @@
             return 'status-default';
         }
 
-        // Function สำหรับสร้างตารางจากข้อมูลที่กรองแล้ว
         function buildTable(dataToDisplay, headersToShow) {
             const tableContainer = document.getElementById('task-table-container');
             let loadingMessage = document.getElementById('loading');
@@ -238,7 +233,6 @@
             tableContainer.innerHTML += tableHtml;
         }
 
-        // Function สำหรับค้นหาข้อมูลแบบคำคล้าย
         function filterTable() {
             const searchTerm = document.getElementById('search-input').value.trim().toLowerCase();
             const filteredData = [];
@@ -280,7 +274,6 @@
             buildTable(filteredData, getHeadersToShow());
         }
 
-        // ฟังก์ชันเพื่อกำหนด Header ที่จะแสดงในตาราง
         function getHeadersToShow() {
             const desiredHeaders = [
                 'ประทับเวลา',
@@ -291,8 +284,6 @@
             return desiredHeaders;
         }
 
-
-        // ดึงข้อมูลและสร้างตารางเมื่อหน้าเว็บโหลดเสร็จ
         Papa.parse(csvUrl, {
             download: true,
             header: true,
