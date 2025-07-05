@@ -1,82 +1,85 @@
+//06072025_0109am//
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8">
-  <title>Dashboard สถานะงาน</title>
-  <link href="https://fonts.googleapis.com/css2?family=Sarabun&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
-  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css">
-  <style>
-    body { font-family: 'Sarabun', sans-serif; background: #f0f0f0; padding: 20px; }
-    table { width:100%; border-collapse: collapse; }
-    /* สีตามสถานะ */
-    .status-รอตรวจสอบ { background-color: #FFF3CD; }
-    .status-ตรวจสอบผ่าน { background-color: #D4EDDA; }
-    .status-ตรวจสอบไม่ผ่าน { background-color: #F8D7DA; }
-    .status-วางบิล { background-color: #E0E0E0; }
-    .status-จ่ายเงิน { background-color: #D1ECF1; }
-    .status-อยู่ระหว่างตรวจ { background-color: #FFE0B2; }
-    .status-อนุมัติจัดพิมพ์ { background-color: #C8E6C9; }
-    .status-ตรวจติดตามผ่าน { background-color: #B2DFDB; }
-    .status-ตรวจติดตามไม่ผ่าน { background-color: #FFCDD2; }
-    .status-ตรวจประเมินผ่าน { background-color: #C5E1A5; }
-    .status-ตรวจประเมินไม่ผ่าน { background-color: #EF9A9A; }
-    .status-ปิดโครงการ { background-color: #BDBDBD; }
-  </style>
+  <meta charset="UTF-8">
+  <title>Dashboard สถานะงาน</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css">
+  <style>
+    body { font-family: 'Sarabun', sans-serif; background: #f0f0f0; padding: 20px; }
+    table { width:100%; border-collapse: collapse; }
+    /* สีตามสถานะ */
+    .status-รอตรวจสอบ { background-color: #FFF3CD; }
+    .status-ตรวจสอบผ่าน { background-color: #D4EDDA; }
+    .status-ตรวจสอบไม่ผ่าน { background-color: #F8D7DA; }
+    .status-วางบิล { background-color: #E0E0E0; }
+    .status-จ่ายเงิน { background-color: #D1ECF1; }
+    .status-อยู่ระหว่างตรวจ { background-color: #FFE0B2; }
+    .status-อนุมัติจัดพิมพ์ { background-color: #C8E6C9; }
+    .status-ตรวจติดตามผ่าน { background-color: #B2DFDB; }
+    .status-ตรวจติดตามไม่ผ่าน { background-color: #FFCDD2; }
+    .status-ตรวจประเมินผ่าน { background-color: #C5E1A5; }
+    .status-ตรวจประเมินไม่ผ่าน { background-color: #EF9A9A; }
+    .status-ปิดโครงการ { background-color: #BDBDBD; }
+  </style>
 </head>
 <body>
-  <h2>Dashboard สถานะงาน</h2>
-  <table id="statusTable" class="display nowrap">
-    <thead><tr>
-      <th>ประทับเวลา</th>
-      <th>ชื่อเครื่องจักร</th>
-      <th>รายการดำเนินการ</th>
-      <th>สถานะงาน</th>
-    </tr></thead>
-    <tbody></tbody>
-  </table>
+  <h2>Dashboard สถานะงาน</h2>
+  <table id="statusTable" class="display nowrap">
+    <thead><tr>
+      <th>ประทับเวลา</th>
+      <th>ชื่อเครื่องจักร</th>
+      <th>รายการดำเนินการ</th>
+      <th>สถานะงาน</th>
+    </tr></thead>
+    <tbody></tbody>
+  </table>
 
-  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-  <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
-  <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
-  <script>
-    const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRvcrOwNXXon7ub2437NZh70H6rkwxqBeS_x1QHJtzFHiS3EJ9Qk9ClY2p6GLzy2kNanEzK_MIyJW0T/pub?gid=1224553793&single=true&output=csv";
+  <script>
+    // *** ส่วนที่คุณต้องแก้ไข/เพิ่มโค้ดคือบรรทัดด้านล่างนี้ ***
+    const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRvcrOwNXXon7ub2437NZh70H6rkwxqBeS_x1QHJtzFHiS3EJ9Qk9ClY2p6GLzy2kNanEzK_MIyJW0T/pub?gid=1224553793&single=true&output=csv" + "&t=" + new Date().getTime();
+    // ******************************************************
 
-    fetch(csvUrl)
-      .then(r => r.text())
-      .then(text => {
-        const data = Papa.parse(text, { header: true }).data;
-        const tbody = document.querySelector("#statusTable tbody");
+    fetch(csvUrl)
+      .then(r => r.text())
+      .then(text => {
+        const data = Papa.parse(text, { header: true }).data;
+        const tbody = document.querySelector("#statusTable tbody");
 
-        data.forEach(r => {
-          const t = r["ประทับเวลา"]?.trim(),
-                m = r["ชื่อเครื่องจักรตามสัญญาฯโครงการของท่าน"]?.trim(),
-                a = r["โปรดเลือกรายการที่จะดำเนินการ"]?.trim(),
-                s = r["สถานะงาน"]?.trim();
-          if (t && m && a && s) {
-            const tr = document.createElement("tr");
-            tr.className = "status-" + s;
-            tr.innerHTML = `<td>${t}</td><td>${m}</td><td>${a}</td><td>${s}</td>`;
-            tbody.appendChild(tr);
-          }
-        });
+        data.forEach(r => {
+          const t = r["ประทับเวลา"]?.trim(),
+                m = r["ชื่อเครื่องจักรตามสัญญาฯโครงการของท่าน"]?.trim(),
+                a = r["โปรดเลือกรายการที่จะดำเนินการ"]?.trim(),
+                s = r["สถานะงาน"]?.trim();
+          if (t && m && a && s) {
+            const tr = document.createElement("tr");
+            tr.className = "status-" + s;
+            tr.innerHTML = `<td>${t}</td><td>${m}</td><td>${a}</td><td>${s}</td>`;
+            tbody.appendChild(tr);
+          }
+        });
 
-        $('#statusTable').DataTable({
-          dom: 'Bfrtip',
-          buttons: ['excelHtml5'],
-          language: {
-            search: "ค้นหา:", lengthMenu: "แสดง _MENU_ แถว",
-            info: "แสดง _START_ ถึง _END_ จาก _TOTAL_ แถว",
-            zeroRecords: "ไม่พบข้อมูล",
-            paginate: { first: "หน้าแรก", last: "หน้าสุดท้าย", next: "ถัดไป", previous: "ก่อนหน้า" }
-          }
-        });
-      })
-      .catch(err => console.error("เกิดข้อผิดพลาดดึงข้อมูล CSV:", err));
-  </script>
+        $('#statusTable').DataTable({
+          dom: 'Bfrtip',
+          buttons: ['excelHtml5'],
+          language: {
+            search: "ค้นหา:", lengthMenu: "แสดง _MENU_ แถว",
+            info: "แสดง _START_ ถึง _END_ จาก _TOTAL_ แถว",
+            zeroRecords: "ไม่พบข้อมูล",
+            paginate: { first: "หน้าแรก", last: "หน้าสุดท้าย", next: "ถัดไป", previous: "ก่อนหน้า" }
+          }
+        });
+      })
+      .catch(err => console.error("เกิดข้อผิดพลาดดึงข้อมูล CSV:", err));
+  </script>
 </body>
 </html>
