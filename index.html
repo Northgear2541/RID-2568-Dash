@@ -164,7 +164,7 @@
         const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRvcrOwNXXon7ub2437NZh70H6rkwxqBeS_x1QHJtzFHiS3EJ9Qk9ClY2p6GLzy2kNanEzK_MIyJW0T/pub?gid=1224553793&single=true&output=csv';
 
         let rawData = [];
-        let loadingMessage, errorMessage; 
+        let loadingMessageElement, errorMessageElement; // เปลี่ยนชื่อตัวแปรให้ชัดเจนขึ้น
 
         function getStatusClass(status) {
             const normalizedStatus = (status || '').trim();
@@ -184,22 +184,24 @@
         function buildTable(dataToDisplay, headersToShow) {
             const tableContainer = document.getElementById('task-table-container');
 
-            if (loadingMessage) {
-                loadingMessage.style.display = 'none';
+            // ตรวจสอบว่า Element มีอยู่จริงก่อนจะพยายามเข้าถึง style
+            if (loadingMessageElement) {
+                loadingMessageElement.style.display = 'none';
             }
 
             if (dataToDisplay.length === 0 || !headersToShow.length) {
-                if (errorMessage) {
-                    errorMessage.textContent = 'ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา หรือข้อมูลในไฟล์ว่างเปล่า';
-                    errorMessage.style.display = 'block';
-                    errorMessage.style.color = 'orange';
+                if (errorMessageElement) {
+                    errorMessageElement.textContent = 'ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา หรือข้อมูลในไฟล์ว่างเปล่า';
+                    errorMessageElement.style.display = 'block';
+                    errorMessageElement.style.color = 'orange';
                 }
                 tableContainer.querySelector('table')?.remove();
                 return;
             }
 
-            if (errorMessage) {
-                errorMessage.style.display = 'none';
+            // ตรวจสอบว่า Element มีอยู่จริงก่อนจะพยายามเข้าถึง style
+            if (errorMessageElement) {
+                errorMessageElement.style.display = 'none';
             }
 
             let tableHtml = '<table><thead><tr>';
@@ -280,8 +282,9 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            loadingMessage = document.getElementById('loading');
-            errorMessage = document.getElementById('error-message');
+            // ดึง Element มาเก็บไว้ในตัวแปร หลัง DOM โหลดเสร็จเท่านั้น
+            loadingMessageElement = document.getElementById('loading'); // เปลี่ยนชื่อตัวแปร
+            errorMessageElement = document.getElementById('error-message'); // เปลี่ยนชื่อตัวแปร
 
             Papa.parse(csvUrl, {
                 download: true,
@@ -291,13 +294,13 @@
                     console.log("PapaParse Results:", results);
                     rawData = results.data;
 
-                    if (loadingMessage) loadingMessage.style.display = 'none';
+                    if (loadingMessageElement) loadingMessageElement.style.display = 'none'; // ใช้ตัวแปรใหม่
 
                     if (rawData.length === 0 || !results.meta.fields || results.meta.fields.length === 0) {
-                        if (errorMessage) {
-                            errorMessage.textContent = 'ไม่พบข้อมูลในไฟล์ หรือรูปแบบ Header ไม่ถูกต้อง หรือไฟล์ว่างเปล่า';
-                            errorMessage.style.display = 'block';
-                            errorMessage.style.color = 'orange';
+                        if (errorMessageElement) { // ใช้ตัวแปรใหม่
+                            errorMessageElement.textContent = 'ไม่พบข้อมูลในไฟล์ หรือรูปแบบ Header ไม่ถูกต้อง หรือไฟล์ว่างเปล่า';
+                            errorMessageElement.style.display = 'block';
+                            errorMessageElement.style.color = 'orange';
                         }
                         return;
                     }
@@ -311,12 +314,12 @@
                     }
                 },
                 error: function(err) {
-                    if (loadingMessage) loadingMessage.style.display = 'none';
+                    if (loadingMessageElement) loadingMessageElement.style.display = 'none'; // ใช้ตัวแปรใหม่
 
-                    if (errorMessage) {
-                        errorMessage.textContent = 'เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + err.message + ' โปรดตรวจสอบ URL หรือการตั้งค่าการเผยแพร่ของ Google Sheet';
-                        errorMessage.style.display = 'block';
-                        errorMessage.style.color = 'red';
+                    if (errorMessageElement) { // ใช้ตัวแปรใหม่
+                        errorMessageElement.textContent = 'เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + err.message + ' โปรดตรวจสอบ URL หรือการตั้งค่าการเผยแพร่ของ Google Sheet';
+                        errorMessageElement.style.display = 'block';
+                        errorMessageElement.style.color = 'red';
                     }
                     console.error('PapaParse Error:', err);
                 }
