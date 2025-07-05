@@ -18,18 +18,44 @@
             font-family: 'Th Sarabun PSK', 'Sarabun', sans-serif !important;
             font-size: 16px; 
         }
+        /* Style for column filters */
+        #statusTable tfoot input, #statusTable tfoot select {
+            width: 100%;
+            padding: 3px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            font-family: 'Th Sarabun PSK', sans-serif; /* Ensure filter inputs also use the font */
+            font-size: 14px; /* Adjust size for filters */
+        }
+        /* Color styles for background */
         .status-รอตรวจสอบ { background-color: #FFF3CD; }
         .status-ตรวจสอบผ่าน { background-color: #D4EDDA; }
-        .status-ตรวจสอบไม่ผ่าน { background-color: #F8D7DA; }
         .status-วางบิล { background-color: #E0E0E0; }
         .status-จ่ายเงิน { background-color: #D1ECF1; }
         .status-อยู่ระหว่างตรวจ { background-color: #FFE0B2; }
         .status-อนุมัติจัดพิมพ์ { background-color: #C8E6C9; }
         .status-ตรวจติดตามผ่าน { background-color: #B2DFDB; }
-        .status-ตรวจติดตามไม่ผ่าน { background-color: #FFCDD2; }
         .status-ตรวจประเมินผ่าน { background-color: #C5E1A5; }
-        .status-ตรวจประเมินไม่ผ่าน { background-color: #EF9A9A; }
         .status-ปิดโครงการ { background-color: #BDBDBD; }
+
+        /* === เพิ่ม/แก้ไข CSS สำหรับสีตัวอักษรเป็นสีแดง === */
+        .status-ส่งเข้าระบบซ้ำกัน,
+        .status-ตรวจสอบไม่ผ่าน,
+        .status-ตรวจติดตามไม่ผ่าน,
+        .status-ตรวจประเมินไม่ผ่าน { 
+            background-color: #F8D7DA; /* อาจจะใช้สีแดงอ่อนเดิม หรือเปลี่ยนเป็นสีอื่น */
+            color: red; /* กำหนดสีตัวอักษรเป็นสีแดง */
+            font-weight: bold; /* อาจจะเพิ่มตัวหนาเพื่อเน้นมากขึ้น */
+        }
+        /* ถ้าสถานะ 'ตรวจสอบไม่ผ่าน' มีการกำหนด background-color เดิมอยู่แล้ว
+           ให้มั่นใจว่า class 'status-ตรวจสอบไม่ผ่าน' ที่มี 'color: red;' อยู่ข้างล่างหรือมี !important */
+        /* หรือคุณสามารถกำหนด background-color ใหม่สำหรับสถานะเหล่านี้ได้เลย */
+        /* ตัวอย่าง: ถ้าต้องการพื้นหลังสีชมพูอ่อน และตัวอักษรสีแดง */
+        /* .status-ตรวจสอบไม่ผ่าน { background-color: #FFCDD2; color: red; font-weight: bold; } */
+        /* สำหรับ 'ตรวจสอบไม่ผ่าน' และ 'ตรวจติดตามไม่ผ่าน' ผมได้กำหนด background-color เดิมไว้แล้ว
+           ดังนั้นแค่เพิ่ม color: red; ก็พอ แต่ผมรวมไว้ในกลุ่มเดียวกัน */
+
     </style>
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css">
@@ -37,13 +63,23 @@
 <body>
     <h2>Dashboard สถานะงาน</h2>
     <table id="statusTable" class="display nowrap">
-        <thead><tr>
-            <th>ประทับเวลา</th>
-            <th>ชื่อเครื่องจักร</th>
-            <th>รายการดำเนินการ</th>
-            <th>สถานะงาน</th>
-        </tr></thead>
+        <thead>
+            <tr>
+                <th>ประทับเวลา</th>
+                <th>ชื่อเครื่องจักร</th>
+                <th>รายการดำเนินการ</th>
+                <th>สถานะงาน</th>
+            </tr>
+        </thead>
         <tbody></tbody>
+        <tfoot>
+            <tr>
+                <th>ประทับเวลา</th>
+                <th>ชื่อเครื่องจักร</th>
+                <th>รายการดำเนินการ</th>
+                <th>สถานะงาน</th>
+            </tr>
+        </tfoot>
     </table>
 
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -62,42 +98,73 @@
             fetch(csvUrl)
                 .then(r => r.text())
                 .then(text => {
-                    const data = Papa.parse(text, { header: true }).data;
-                    
-                    if ($.fn.DataTable.isDataTable('#statusTable')) {
-                        dataTable.clear();
-                    } else {
-                        dataTable = $('#statusTable').DataTable({
-                            // *** แก้ไขตรงนี้: เพิ่ม 'l' เข้าไปใน string ของ dom ***
-                            dom: 'lBfrtip', // 'l' = Length changing input (แสดง_MENU_แถว)
-                            // **************************************************
-                            buttons: ['excelHtml5'],
-                            lengthMenu: [
-                                [10, 20, -1], 
-                                ['10 แถว', '20 แถว', 'แสดงทั้งหมด']
-                            ],
-                            language: {
-                                search: "ค้นหา:", 
-                                lengthMenu: "แสดง _MENU_ แถว", 
-                                info: "แสดง _START_ ถึง _END_ จาก _TOTAL_ แถว",
-                                zeroRecords: "ไม่พบข้อมูล",
-                                paginate: { first: "หน้าแรก", last: "หน้าสุดท้าย", next: "ถัดไป", previous: "ก่อนหน้า" }
-                            }
-                        });
-                    }
+                    const rawData = Papa.parse(text, { header: true }).data;
+                    const processedData = [];
 
-                    data.forEach(r => {
-                        const t = r["ประทับเวลา"]?.trim(),
-                            m = r["ชื่อเครื่องจักรตามสัญญาฯโครงการของท่าน"]?.trim(),
-                            a = r["โปรดเลือกรายการที่จะดำเนินการ"]?.trim(),
-                            s = r["สถานะงาน"]?.trim();
+                    rawData.forEach(r => {
+                        const t = r["ประทับเวลา"]?.trim();
+                        const m = r["ชื่อเครื่องจักรตามสัญญาฯโครงการของท่าน"]?.trim();
+                        const a = r["โปรดเลือกรายการที่จะดำเนินการ"]?.trim();
+                        const s = r["สถานะงาน"]?.trim();
                         if (t && m && a && s) {
-                            const rowNode = dataTable.row.add([t, m, a, s]).node();
-                            $(rowNode).addClass("status-" + s); 
+                            processedData.push([t, m, a, s]);
                         }
                     });
+
+                    if ($.fn.DataTable.isDataTable('#statusTable')) {
+                        dataTable.destroy();
+                        $('#statusTable tbody').empty();
+                        $('#statusTable tfoot th').empty();
+                    } 
                     
-                    dataTable.draw();
+                    dataTable = $('#statusTable').DataTable({
+                        dom: 'lBfrtip',
+                        buttons: ['excelHtml5'],
+                        lengthMenu: [
+                            [10, 20, -1], 
+                            ['10 แถว', '20 แถว', 'แสดงทั้งหมด']
+                        ],
+                        language: {
+                            search: "ค้นหา:", 
+                            lengthMenu: "แสดง _MENU_ แถว", 
+                            info: "แสดง _START_ ถึง _END_ จาก _TOTAL_ แถว",
+                            zeroRecords: "ไม่พบข้อมูล",
+                            paginate: { first: "หน้าแรก", last: "หน้าสุดท้าย", next: "ถัดไป", previous: "ก่อนหน้า" }
+                        },
+                        data: processedData,
+                        rowCallback: function(row, data, index) {
+                            const status = data[3]; 
+                            $(row).addClass("status-" + status);
+                        },
+                        initComplete: function () {
+                            this.api().columns().every(function () {
+                                const column = this;
+                                const columnIndex = column.index();
+                                let filterElement;
+
+                                if (columnIndex === 2 || columnIndex === 3) { 
+                                    filterElement = $('<select><option value="">--เลือก--</option></select>')
+                                        .appendTo($(column.footer()).empty())
+                                        .on('change', function () {
+                                            const val = $.fn.dataTable.util.escapeRegex($(this).val());
+                                            column.search(val ? '^' + val + '$' : '', true, false).draw();
+                                        });
+
+                                    column.data().unique().sort().each(function (d, j) {
+                                        filterElement.append('<option value="' + d + '">' + d + '</option>');
+                                    });
+                                } else { 
+                                    filterElement = $('<input type="text" placeholder="ค้นหา ' + $(column.header()).text() + '" />')
+                                        .appendTo($(column.footer()).empty())
+                                        .on('keyup change', function () {
+                                            if (column.search() !== this.value) {
+                                                column.search(this.value).draw();
+                                            }
+                                        });
+                                }
+                            });
+                        }
+                    });
                 })
                 .catch(err => console.error("เกิดข้อผิดพลาดดึงข้อมูล CSV:", err));
         }
