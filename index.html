@@ -104,11 +104,12 @@
             white-space: nowrap;
         }
 
-        .status-completed { background-color: #27ae60; }
-        .status-in-progress { background-color: #2980b9; }
-        .status-pending { background-color: #f39c12; }
-        .status-cancelled { background-color: #c0392b; }
-        .status-not-started { background-color: #7f8c8d; }
+        .status-completed { background-color: #27ae60; } /* เสร็จสิ้น */
+        .status-in-progress { background-color: #2980b9; } /* กำลังดำเนินการ */
+        .status-pending { background-color: #f39c12; }    /* รอตรวจสอบ */
+        .status-reviewed { background-color: #1abc9c; }   /* ตรวจสอบแล้ว - NEW! */
+        .status-cancelled { background-color: #c0392b; }  /* ยกเลิก */
+        .status-not-started { background-color: #7f8c8d; } /* ยังไม่เริ่ม */
         .status-default { background-color: #bdc3c7; }
 
         @media (max-width: 768px) {
@@ -151,8 +152,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <script>
         // --- ★★★ ใส่ URL ของ CSV ที่คุณเผยแพร่ไว้ตรงนี้ ★★★ ---
+        // ใช้ URL ล่าสุดที่คุณได้รับจากการเผยแพร่ Google Sheet ของคุณ
         const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRvcrOwNXXon7ub2437NZh70H6rkwxqBeS_x1QHJtzFHiS3EJ9Qk9ClY2p6GLzy2kNanEzK_MIyJW0T/pub?gid=1224553793&single=true&output=csv'; 
         // ---------------------------------------------------------
+
+        let rawData = []; // เก็บข้อมูลดิบที่ได้จาก PapaParse ไว้สำหรับการกรอง
 
         // Function สำหรับกำหนดสีของสถานะ
         function getStatusClass(status) {
@@ -160,26 +164,30 @@
             if (normalizedStatus === 'เสร็จสิ้น') return 'status-completed';
             if (normalizedStatus === 'กำลังดำเนินการ') return 'status-in-progress';
             if (normalizedStatus === 'รอตรวจสอบ') return 'status-pending';
+            if (normalizedStatus === 'ตรวจสอบแล้ว') return 'status-reviewed'; // NEW! สำหรับสถานะ 'ตรวจสอบแล้ว'
             if (normalizedStatus === 'ยกเลิก') return 'status-cancelled';
             if (normalizedStatus === 'ยังไม่เริ่ม') return 'status-not-started';
             return 'status-default';
         }
 
-        // Function สำหรับสร้างตาราง
-        function buildTable(data, headersToShow) {
+        // Function สำหรับสร้างตารางจากข้อมูลที่กรองแล้ว
+        function buildTable(dataToDisplay, headersToShow) {
             const tableContainer = document.getElementById('task-table-container');
             const loadingMessage = document.getElementById('loading');
             const errorMessage = document.getElementById('error-message');
 
-            if (data.length === 0 || !headersToShow.length) {
-                loadingMessage.style.display = 'none';
-                errorMessage.textContent = 'ไม่พบข้อมูลในไฟล์ หรือ URL ไม่ถูกต้อง หรือไฟล์ว่างเปล่า';
+            loadingMessage.style.display = 'none'; // ซ่อนข้อความ loading เสมอเมื่อเรียก buildTable
+
+            if (dataToDisplay.length === 0 || !headersToShow.length) {
+                // ถ้าไม่มีข้อมูลที่จะแสดง (หลังจากกรองแล้ว หรือ CSV ว่างเปล่า)
+                errorMessage.textContent = 'ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา หรือข้อมูลในไฟล์ว่างเปล่า';
                 errorMessage.style.display = 'block';
                 errorMessage.style.color = 'orange';
+                tableContainer.innerHTML = ''; // Clear existing table
                 return;
             }
             
-            loadingMessage.style.display = 'none';
+            errorMessage.style.display = 'none'; // ซ่อนข้อความ error หากมีข้อมูล
 
             let tableHtml = '<table><thead><tr>';
             headersToShow.forEach(header => {
@@ -187,4 +195,109 @@
             });
             tableHtml += '</tr></thead><tbody>';
 
-            data.forEach(row => {
+            dataToDisplay.forEach(row => {
+                let rowHtml = '<tr>';
+                headersToShow.forEach(header => {
+                    const cellData = row[header] || ''; // เข้าถึงข้อมูลด้วยชื่อ Header โดยตรง
+                    if (header === 'สถานะงาน') { // ใช้ชื่อ Header 'สถานะงาน' ตามภาพที่ให้มา
+                        rowHtml += `<td><span class="status ${getStatusClass(cellData)}">${cellData}</span></td>`;
+                    } else {
+                        rowHtml += `<td>${cellData}</td>`;
+                    }
+                });
+                rowHtml += '</tr>';
+                tableHtml += rowHtml;
+            });
+
+            tableHtml += '</tbody></table>';
+            
+            tableContainer.innerHTML = tableHtml;
+        }
+
+        // Function สำหรับค้นหาข้อมูลแบบคำคล้าย
+        function filterTable() {
+            const searchTerm = document.getElementById('search-input').value.trim().toLowerCase();
+            const filteredData = [];
+
+            if (searchTerm === '') {
+                // ถ้าไม่มีคำค้นหา ให้แสดงข้อมูลทั้งหมด
+                buildTable(rawData, rawData.length > 0 ? Object.keys(rawData[0]).slice(0,5) : []); // Rebuild with original data
+                return;
+            }
+
+            const fuzzyRegex = new RegExp(searchTerm.split('').join('.*'), 'i');
+
+            // กำหนดชื่อ Header ที่เราต้องการให้ค้นหา (ตามชื่อ Header จริงๆ ใน Google Sheet ของคุณ)
+            // อ้างอิงจากภาพ Google Sheet ที่คุณให้มา
+            const searchHeaders = [
+                'ชื่อเครื่องจักร/คำสัญญา/ทางราชการ/ของที่', // คอลัมน์ B
+                'โปรดเลือกร้านค้าที่จะดำเนินกา',            // คอลัมน์ C (รายการดำเนินการ)
+                'สถานะงาน'                               // คอลัมน์ E
+            ];
+
+            rawData.forEach(row => {
+                let rowMatches = false;
+                for (const header of searchHeaders) {
+                    const cellData = (row[header] || '').toLowerCase(); // ดึงข้อมูลด้วยชื่อ Header
+                    if (fuzzyRegex.test(cellData)) {
+                        rowMatches = true;
+                        break;
+                    }
+                }
+                if (rowMatches) {
+                    filteredData.push(row);
+                }
+            });
+
+            // สร้างตารางใหม่ด้วยข้อมูลที่กรองแล้ว
+            buildTable(filteredData, rawData.length > 0 ? Object.keys(rawData[0]).slice(0,5) : []); // ใช้ Headers เดิมในการแสดงผล
+        }
+
+
+        // ดึงข้อมูลและสร้างตารางเมื่อหน้าเว็บโหลดเสร็จ
+        Papa.parse(csvUrl, {
+            download: true,
+            header: true, // สำคัญ: กำหนดให้แถวแรกเป็น Header
+            skipEmptyLines: true,
+            complete: function(results) {
+                // *** เพิ่มบรรทัดนี้ ***
+                console.log("PapaParse Results:", results); 
+                // **********************
+
+                rawData = results.data; // เก็บข้อมูลดิบไว้
+
+                // ตรวจสอบว่า PapaParse อ่าน Header ได้ถูกต้องหรือไม่
+                // และตรวจสอบว่ามีข้อมูลจริง ๆ หลังการ Parse หรือไม่
+                if (rawData.length === 0 || !results.meta.fields || results.meta.fields.length === 0) {
+                    const loadingMessage = document.getElementById('loading');
+                    const errorMessage = document.getElementById('error-message');
+                    loadingMessage.style.display = 'none';
+                    errorMessage.textContent = 'ไม่พบข้อมูลในไฟล์ หรือรูปแบบ Header ไม่ถูกต้อง หรือไฟล์ว่างเปล่า';
+                    errorMessage.style.display = 'block';
+                    errorMessage.style.color = 'orange';
+                    return;
+                }
+
+                // ดึง Headers ที่ PapaParse อ่านได้ และเลือก 5 คอลัมน์แรก
+                const headersToShow = results.meta.fields.slice(0, 5); 
+
+                // สร้างตารางครั้งแรกด้วยข้อมูลทั้งหมด
+                buildTable(rawData, headersToShow);
+
+                // เพิ่ม Event Listener สำหรับช่องค้นหา
+                document.getElementById('search-input').addEventListener('keyup', filterTable);
+            },
+            error: function(err) {
+                const loadingMessage = document.getElementById('loading');
+                const errorMessage = document.getElementById('error-message');
+                loadingMessage.style.display = 'none';
+                errorMessage.textContent = 'เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + err.message + ' โปรดตรวจสอบ URL หรือการตั้งค่าการเผยแพร่ของ Google Sheet';
+                errorMessage.style.display = 'block';
+                errorMessage.style.color = 'red';
+                console.error('PapaParse Error:', err);
+            }
+        });
+    </script>
+
+</body>
+</html>
