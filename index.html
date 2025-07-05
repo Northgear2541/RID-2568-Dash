@@ -150,4 +150,201 @@
         <h1>ตารางแสดงสถานะงาน</h1>
 
         <div id="search-container">
-            <input type="text" id="search-input" placeholder
+            <input type="text" id="search-input" placeholder="พิมพ์คำค้นหา...">
+            <span id="search-hint">ค้นหาโดยพิมพ์ตัวอักษรอย่างน้อย 2 ตัวอักษร</span>
+        </div>
+
+        <div id="task-table-container">
+            <p id="loading">กำลังโหลดข้อมูลจาก Google Sheet...</p>
+            <p id="error-message" style="display:none;"></p>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script>
+        // --- ★★★ ใส่ URL ของ CSV ที่คุณเผยแพร่ไว้ตรงนี้ ★★★ ---
+        const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRvcrOwNXXon7ub2437NZh70H6rkwxqBeS_x1QHJtzFHiS3EJ9Qk9ClY2p6GLzy2kNanEzK_MIyJW0T/pub?gid=1224553793&single=true&output=csv';
+        // ---------------------------------------------------------
+
+        let rawData = []; // เก็บข้อมูลดิบที่ได้จาก PapaParse ไว้สำหรับการกรอง
+
+        // Function สำหรับกำหนดสีของสถานะ
+        function getStatusClass(status) {
+            const normalizedStatus = (status || '').trim();
+
+            const statusList = normalizedStatus.split(',').map(s => s.trim());
+
+            if (statusList.includes('เสร็จสิ้น')) return 'status-completed';
+            if (statusList.includes('ยกเลิก')) return 'status-cancelled';
+            if (statusList.includes('ตรวจสอบไม่ผ่าน')) return 'status-not-passed';
+            if (statusList.includes('กำลังดำเนินการ')) return 'status-in-progress';
+            if (statusList.includes('ตรวจสอบแล้ว')) return 'status-reviewed';
+            if (statusList.includes('รอตรวจสอบ')) return 'status-pending';
+            if (statusList.includes('ยังไม่เริ่ม')) return 'status-not-started';
+
+            return 'status-default';
+        }
+
+        // Function สำหรับสร้างตารางจากข้อมูลที่กรองแล้ว
+        function buildTable(dataToDisplay, headersToShow) {
+            const tableContainer = document.getElementById('task-table-container');
+            let loadingMessage = document.getElementById('loading');
+            let errorMessage = document.getElementById('error-message');
+
+            if (loadingMessage) {
+                loadingMessage.style.display = 'none';
+            }
+
+            if (dataToDisplay.length === 0 || !headersToShow.length) {
+                if (!errorMessage) {
+                    errorMessage = document.createElement('p');
+                    errorMessage.id = 'error-message';
+                    tableContainer.appendChild(errorMessage);
+                }
+                errorMessage.textContent = 'ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา หรือข้อมูลในไฟล์ว่างเปล่า';
+                errorMessage.style.display = 'block';
+                errorMessage.style.color = 'orange';
+                tableContainer.querySelector('table')?.remove();
+                return;
+            }
+
+            if (errorMessage) {
+                errorMessage.style.display = 'none';
+            }
+
+            let tableHtml = '<table><thead><tr>';
+            headersToShow.forEach(header => {
+                tableHtml += `<th>${header}</th>`;
+            });
+            tableHtml += '</tr></thead><tbody>';
+
+            dataToDisplay.forEach(row => {
+                let rowHtml = '<tr>';
+                headersToShow.forEach(header => {
+                    const cellData = row.hasOwnProperty(header) ? row[header] : '';
+                    if (header === 'สถานะงาน') {
+                        rowHtml += `<td><span class="status ${getStatusClass(cellData)}">${cellData}</span></td>`;
+                    } else {
+                        rowHtml += `<td>${cellData}</td>`;
+                    }
+                });
+                rowHtml += '</tr>';
+                tableHtml += rowHtml;
+            });
+
+            tableHtml += '</tbody></table>';
+
+            tableContainer.querySelector('table')?.remove();
+            tableContainer.innerHTML += tableHtml;
+        }
+
+        // Function สำหรับค้นหาข้อมูลแบบคำคล้าย
+        function filterTable() {
+            const searchTerm = document.getElementById('search-input').value.trim().toLowerCase();
+            const filteredData = [];
+
+            if (searchTerm.length < 2 && searchTerm !== '') {
+                buildTable(rawData, getHeadersToShow());
+                return;
+            }
+
+            if (searchTerm === '') {
+                buildTable(rawData, getHeadersToShow());
+                return;
+            }
+
+            const fuzzyRegex = new RegExp(searchTerm.split('').join('.*'), 'i');
+
+            const searchHeaders = [
+                'ชื่อเครื่องจักรตามสัญญาฯโครงการของท่าน',
+                'โปรดเลือกรายการที่จะดำเนินการ',
+                'สถานะงาน'
+            ];
+
+            rawData.forEach(row => {
+                let rowMatches = false;
+                for (const header of searchHeaders) {
+                    if (row.hasOwnProperty(header)) {
+                        const cellData = (row[header] || '').toLowerCase();
+                        if (fuzzyRegex.test(cellData)) {
+                            rowMatches = true;
+                            break;
+                        }
+                    }
+                }
+                if (rowMatches) {
+                    filteredData.push(row);
+                }
+            });
+
+            buildTable(filteredData, getHeadersToShow());
+        }
+
+        // ฟังก์ชันเพื่อกำหนด Header ที่จะแสดงในตาราง
+        function getHeadersToShow() {
+            const desiredHeaders = [
+                'ประทับเวลา',
+                'ชื่อเครื่องจักรตามสัญญาฯโครงการของท่าน',
+                'โปรดเลือกรายการที่จะดำเนินการ',
+                'สถานะงาน'
+            ];
+            return desiredHeaders;
+        }
+
+
+        // ดึงข้อมูลและสร้างตารางเมื่อหน้าเว็บโหลดเสร็จ
+        Papa.parse(csvUrl, {
+            download: true,
+            header: true,
+            skipEmptyLines: true,
+            complete: function(results) {
+                console.log("PapaParse Results:", results);
+                rawData = results.data;
+
+                const loadingMessage = document.getElementById('loading');
+                let errorMessage = document.getElementById('error-message');
+
+                if (loadingMessage) loadingMessage.style.display = 'none';
+
+                if (rawData.length === 0 || !results.meta.fields || results.meta.fields.length === 0) {
+                    if (!errorMessage) {
+                        errorMessage = document.createElement('p');
+                        errorMessage.id = 'error-message';
+                        document.getElementById('task-table-container').appendChild(errorMessage);
+                    }
+                    errorMessage.textContent = 'ไม่พบข้อมูลในไฟล์ หรือรูปแบบ Header ไม่ถูกต้อง หรือไฟล์ว่างเปล่า';
+                    errorMessage.style.display = 'block';
+                    errorMessage.style.color = 'orange';
+                    return;
+                }
+
+                const headersToShow = getHeadersToShow();
+
+                buildTable(rawData, headersToShow);
+
+                const searchInput = document.getElementById('search-input');
+                if (searchInput) {
+                    searchInput.addEventListener('keyup', filterTable);
+                }
+            },
+            error: function(err) {
+                const loadingMessage = document.getElementById('loading');
+                let errorMessage = document.getElementById('error-message');
+
+                if (loadingMessage) loadingMessage.style.display = 'none';
+
+                if (!errorMessage) {
+                    errorMessage = document.createElement('p');
+                    errorMessage.id = 'error-message';
+                    document.getElementById('task-table-container').appendChild(errorMessage);
+                }
+                errorMessage.textContent = 'เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + err.message + ' โปรดตรวจสอบ URL หรือการตั้งค่าการเผยแพร่ของ Google Sheet';
+                errorMessage.style.display = 'block';
+                errorMessage.style.color = 'red';
+                console.error('PapaParse Error:', err);
+            }
+        });
+    </script>
+
+</body>
+</html>
