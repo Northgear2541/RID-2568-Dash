@@ -142,7 +142,7 @@
         <h1>ตารางแสดงสถานะงาน</h1>
 
         <div id="search-container">
-            <input type="text" id="search-input" placeholder="ค้นหาด้วยชื่อเครื่องจักร, รายการดำเนินการ, หรือสถานะ...">
+            <input type="text" id="search-input" placeholder="ค้นหาโดยพิมพ์คำอย่างน้อย 2 ตัวอักษร เช่น ชื่อเครื่องจักร, รายการดำเนินการ, หรือสถานะ...">
         </div>
 
         <div id="task-table-container">
@@ -244,9 +244,15 @@
             const searchTerm = document.getElementById('search-input').value.trim().toLowerCase();
             const filteredData = [];
 
+            // กำหนดเงื่อนไข: ต้องมีอย่างน้อย 2 ตัวอักษรในการค้นหา
+            if (searchTerm.length < 2 && searchTerm !== '') { // ถ้าพิมพ์น้อยกว่า 2 ตัวอักษรและไม่ใช่ช่องว่าง ให้แสดงข้อมูลทั้งหมด
+                buildTable(rawData, getHeadersToShow()); // แสดงข้อมูลทั้งหมด
+                return;
+            }
+
             if (searchTerm === '') {
                 // ถ้าไม่มีคำค้นหา ให้แสดงข้อมูลทั้งหมด
-                buildTable(rawData, rawData.length > 0 ? Object.keys(rawData[0]).slice(0,5) : []); 
+                buildTable(rawData, getHeadersToShow()); 
                 return;
             }
 
@@ -264,7 +270,7 @@
                 let rowMatches = false;
                 for (const header of searchHeaders) {
                     // ตรวจสอบว่า header นั้นมีอยู่ใน row ก่อนที่จะพยายามเข้าถึง
-                    if (row.hasOwnProperty(header)) { // ใช้ hasOwnProperty เพื่อความปลอดภัย
+                    if (row.hasOwnProperty(header)) { 
                         const cellData = (row[header] || '').toLowerCase(); 
                         if (fuzzyRegex.test(cellData)) {
                             rowMatches = true;
@@ -277,8 +283,33 @@
                 }
             });
 
-            buildTable(filteredData, rawData.length > 0 ? Object.keys(rawData[0]).slice(0,5) : []); 
+            buildTable(filteredData, getHeadersToShow()); 
         }
+
+        // ฟังก์ชันเพื่อกำหนด Header ที่จะแสดงในตาราง
+        function getHeadersToShow() {
+            // ดึง meta.fields จาก rawData หรือสร้าง array เปล่าถ้าไม่มี
+            const allFields = rawData.length > 0 ? Object.keys(rawData[0]) : [];
+            const headers = [];
+            const excludedHeaders = ['ที่อยู่อีเมล']; // คอลัมน์ที่ไม่ต้องการแสดง
+
+            // วนลูปผ่านทุก field ที่ PapaParse อ่านได้
+            for (let i = 0; i < allFields.length; i++) {
+                const header = allFields[i];
+                // เพิ่ม Header ถ้าไม่ได้อยู่ในรายการที่ถูกยกเว้น
+                if (!excludedHeaders.includes(header)) {
+                    headers.push(header);
+                }
+                // ถ้าต้องการแสดงแค่ 5 คอลัมน์แรก (ไม่นับ "ที่อยู่อีเมล" ถ้ามี)
+                // สามารถเพิ่มเงื่อนไข break ตรงนี้ได้
+                // ตัวอย่าง: ถ้าต้องการแสดงแค่ 5 คอลัมน์แรกที่ไม่ใช่ "ที่อยู่อีเมล"
+                if (headers.length >= 5) { // แสดง 5 คอลัมน์แรกที่ต้องการ
+                    break; 
+                }
+            }
+            return headers;
+        }
+
 
         // ดึงข้อมูลและสร้างตารางเมื่อหน้าเว็บโหลดเสร็จ
         Papa.parse(csvUrl, {
@@ -307,7 +338,8 @@
                     return;
                 }
 
-                const headersToShow = results.meta.fields.slice(0, 5); 
+                // เรียกใช้ getHeadersToShow เพื่อกำหนด Header ที่จะแสดง
+                const headersToShow = getHeadersToShow(); 
 
                 buildTable(rawData, headersToShow);
 
