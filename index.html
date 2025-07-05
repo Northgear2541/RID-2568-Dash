@@ -154,7 +154,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <script>
         // --- ★★★ ใส่ URL ของ CSV ที่คุณเผยแพร่ไว้ตรงนี้ ★★★ ---
-        // URL จากภาพ: https://docs.google.com/spreadsheets/d/e/2PACX-1vRvcrOwNXXon7ub2437NZh70H6rkwxqBeS_x1QHJtzFHiS3EJ9Qk9ClY2p6GLzy2kNanEzK_MIyJW0T/pub?gid=1224553793&single=true&output=csv
         const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRvcrOwNXXon7ub2437NZh70H6rkwxqBeS_x1QHJtzFHiS3EJ9Qk9ClY2p6GLzy2kNanEzK_MIyJW0T/pub?gid=1224553793&single=true&output=csv'; 
         // ---------------------------------------------------------
 
@@ -170,14 +169,13 @@
             // ตรวจสอบสถานะตามลำดับความสำคัญ (สามารถปรับลำดับได้ตามต้องการ)
             // สถานะที่อยู่ด้านบน จะถูกให้ความสำคัญก่อน
             if (statusList.includes('เสร็จสิ้น')) return 'status-completed';
-            if (statusList.includes('ยกเลิก')) return 'status-cancelled'; // ถ้าถูกยกเลิก ควรเป็นสีแดง
-            if (statusList.includes('ตรวจสอบไม่ผ่าน')) return 'status-not-passed'; // เพิ่มสถานะใหม่
+            if (statusList.includes('ยกเลิก')) return 'status-cancelled'; 
+            if (statusList.includes('ตรวจสอบไม่ผ่าน')) return 'status-not-passed'; 
             if (statusList.includes('กำลังดำเนินการ')) return 'status-in-progress';
             if (statusList.includes('ตรวจสอบแล้ว')) return 'status-reviewed';
             if (statusList.includes('รอตรวจสอบ')) return 'status-pending';
             if (statusList.includes('ยังไม่เริ่ม')) return 'status-not-started';
             
-            // ถ้าไม่เข้าเงื่อนไขใดๆ หรือเป็นสถานะที่ไม่ได้กำหนดไว้
             return 'status-default'; 
         }
 
@@ -187,14 +185,11 @@
             let loadingMessage = document.getElementById('loading');
             let errorMessage = document.getElementById('error-message');
 
-            // ซ่อนข้อความ loading เสมอเมื่อเรียก buildTable
             if (loadingMessage) {
                 loadingMessage.style.display = 'none'; 
             }
 
             if (dataToDisplay.length === 0 || !headersToShow.length) {
-                // ถ้าไม่มีข้อมูลที่จะแสดง (หลังจากกรองแล้ว หรือ CSV ว่างเปล่า)
-                // ตรวจสอบว่า errorMessage element มีอยู่ ถ้าไม่ ให้สร้างขึ้นใหม่
                 if (!errorMessage) {
                     errorMessage = document.createElement('p');
                     errorMessage.id = 'error-message';
@@ -203,11 +198,10 @@
                 errorMessage.textContent = 'ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา หรือข้อมูลในไฟล์ว่างเปล่า';
                 errorMessage.style.display = 'block';
                 errorMessage.style.color = 'orange';
-                tableContainer.querySelector('table')?.remove(); // ลบตารางเดิมถ้ามี
+                tableContainer.querySelector('table')?.remove(); 
                 return;
             }
             
-            // ซ่อนข้อความ error หากมีข้อมูล
             if (errorMessage) {
                 errorMessage.style.display = 'none'; 
             }
@@ -221,7 +215,7 @@
             dataToDisplay.forEach(row => {
                 let rowHtml = '<tr>';
                 headersToShow.forEach(header => {
-                    const cellData = row[header] || ''; // เข้าถึงข้อมูลด้วยชื่อ Header โดยตรง
+                    const cellData = row[header] || ''; 
                     if (header === 'สถานะงาน') { 
                         rowHtml += `<td><span class="status ${getStatusClass(cellData)}">${cellData}</span></td>`;
                     } else {
@@ -234,9 +228,8 @@
 
             tableHtml += '</tbody></table>';
             
-            // ลบตารางเก่าถ้ามี ก่อนจะใส่ตารางใหม่
             tableContainer.querySelector('table')?.remove();
-            tableContainer.innerHTML += tableHtml; // เพิ่มตารางเข้าไปใน container (ไม่ได้ล้างทั้ง container เพื่อให้ #loading และ #error-message ยังคงอยู่)
+            tableContainer.innerHTML += tableHtml; 
         }
 
         // Function สำหรับค้นหาข้อมูลแบบคำคล้าย
@@ -244,22 +237,18 @@
             const searchTerm = document.getElementById('search-input').value.trim().toLowerCase();
             const filteredData = [];
 
-            // กำหนดเงื่อนไข: ต้องมีอย่างน้อย 2 ตัวอักษรในการค้นหา
-            if (searchTerm.length < 2 && searchTerm !== '') { // ถ้าพิมพ์น้อยกว่า 2 ตัวอักษรและไม่ใช่ช่องว่าง ให้แสดงข้อมูลทั้งหมด
-                buildTable(rawData, getHeadersToShow()); // แสดงข้อมูลทั้งหมด
+            if (searchTerm.length < 2 && searchTerm !== '') { 
+                buildTable(rawData, getHeadersToShow()); 
                 return;
             }
 
             if (searchTerm === '') {
-                // ถ้าไม่มีคำค้นหา ให้แสดงข้อมูลทั้งหมด
                 buildTable(rawData, getHeadersToShow()); 
                 return;
             }
 
             const fuzzyRegex = new RegExp(searchTerm.split('').join('.*'), 'i');
 
-            // กำหนดชื่อ Header ที่เราต้องการให้ค้นหา (ต้องตรงกับผลลัพธ์จาก PapaParse.meta.fields เป๊ะๆ)
-            // อ้างอิงจาก meta.fields ที่ผู้ใช้ให้มา: 'ชื่อเครื่องจักรตามสัญญาฯโครงการของท่าน', 'โปรดเลือกรายการที่จะดำเนินการ', 'สถานะงาน'
             const searchHeaders = [
                 'ชื่อเครื่องจักรตามสัญญาฯโครงการของท่าน', 
                 'โปรดเลือกรายการที่จะดำเนินการ',          
@@ -269,7 +258,6 @@
             rawData.forEach(row => {
                 let rowMatches = false;
                 for (const header of searchHeaders) {
-                    // ตรวจสอบว่า header นั้นมีอยู่ใน row ก่อนที่จะพยายามเข้าถึง
                     if (row.hasOwnProperty(header)) { 
                         const cellData = (row[header] || '').toLowerCase(); 
                         if (fuzzyRegex.test(cellData)) {
@@ -288,25 +276,14 @@
 
         // ฟังก์ชันเพื่อกำหนด Header ที่จะแสดงในตาราง
         function getHeadersToShow() {
-            // ดึง meta.fields จาก rawData หรือสร้าง array เปล่าถ้าไม่มี
-            const allFields = rawData.length > 0 ? Object.keys(rawData[0]) : [];
-            const headers = [];
-            // เพิ่ม 'ลิงก์แผนการดำเนินงานโครงการ(ประกอบสัญญาฯ)' เข้าไปใน excludedHeaders
-            const excludedHeaders = ['ที่อยู่อีเมล', 'ลิงก์แผนการดำเนินงานโครงการ(ประกอบสัญญาฯ)']; 
-
-            // วนลูปผ่านทุก field ที่ PapaParse อ่านได้
-            for (let i = 0; i < allFields.length; i++) {
-                const header = allFields[i];
-                // เพิ่ม Header ถ้าไม่ได้อยู่ในรายการที่ถูกยกเว้น
-                if (!excludedHeaders.includes(header)) {
-                    headers.push(header);
-                }
-                // ถ้าต้องการแสดงแค่ 5 คอลัมน์แรก (ไม่นับคอลัมน์ที่ถูก exclude)
-                if (headers.length >= 5) { // แสดง 5 คอลัมน์แรกที่ต้องการ
-                    break; 
-                }
-            }
-            return headers;
+            // กำหนด Header ที่ต้องการแสดงเป๊ะๆ
+            const desiredHeaders = [
+                'ประทับเวลา',
+                'ชื่อเครื่องจักรตามสัญญาฯโครงการของท่าน',
+                'โปรดเลือกรายการที่จะดำเนินการ', // เพิ่มคอลัมน์นี้กลับมา
+                'สถานะงาน'
+            ];
+            return desiredHeaders;
         }
 
 
@@ -325,7 +302,6 @@
                 if (loadingMessage) loadingMessage.style.display = 'none';
 
                 if (rawData.length === 0 || !results.meta.fields || results.meta.fields.length === 0) {
-                    // สร้าง errorMessage element ถ้าไม่มี
                     if (!errorMessage) {
                         errorMessage = document.createElement('p');
                         errorMessage.id = 'error-message';
@@ -337,12 +313,10 @@
                     return;
                 }
 
-                // เรียกใช้ getHeadersToShow เพื่อกำหนด Header ที่จะแสดง
                 const headersToShow = getHeadersToShow(); 
 
                 buildTable(rawData, headersToShow);
 
-                // ตรวจสอบว่า search-input มีอยู่ก่อนจะ addEventListener
                 const searchInput = document.getElementById('search-input');
                 if (searchInput) {
                     searchInput.addEventListener('keyup', filterTable);
@@ -354,7 +328,6 @@
 
                 if (loadingMessage) loadingMessage.style.display = 'none';
                 
-                // สร้าง errorMessage element ถ้าไม่มี
                 if (!errorMessage) {
                     errorMessage = document.createElement('p');
                     errorMessage.id = 'error-message';
