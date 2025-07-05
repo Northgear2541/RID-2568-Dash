@@ -52,6 +52,7 @@
             color: #777;
         }
 
+        /* Initial state of messages, will be managed by JS */
         #loading {
             text-align: center;
             font-size: 1.2em;
@@ -64,7 +65,7 @@
             font-size: 1.1em;
             padding: 20px;
             color: red;
-            display: none;
+            display: none; /* Initially hidden */
         }
 
         table {
@@ -149,7 +150,7 @@
 
         <div id="search-container">
             <input type="text" id="search-input" placeholder="พิมพ์คำค้นหา...">
-            <span id="search-hint">ค้นหาโดยพิมพ์ชื่อคำที่ต้องการค้นหาอย่างน้อย 2 คำ</span>
+            <span id="search-hint">ค้นหาโดยพิมพ์ตัวอักษรอย่างน้อย 2 ตัวอักษร</span>
         </div>
 
         <div id="task-table-container">
@@ -160,9 +161,7 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <script>
-        // --- ★★★ URL อัปเดตแล้ว! ★★★ ---
         const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRvcrOwNXXon7ub2437NZh70H6rkwxqBeS_x1QHJtzFHiS3EJ9Qk9ClY2p6GLzy2kNanEzK_MIyJW0T/pub?gid=1224553793&single=true&output=csv';
-        // ------------------------------------
 
         let rawData = [];
 
@@ -183,27 +182,26 @@
 
         function buildTable(dataToDisplay, headersToShow) {
             const tableContainer = document.getElementById('task-table-container');
+            // ใช้ Optional Chaining (?) เพื่อป้องกัน Error หาก Element เป็น null
             let loadingMessage = document.getElementById('loading');
             let errorMessage = document.getElementById('error-message');
 
+            // ตรวจสอบก่อนเข้าถึง style
             if (loadingMessage) {
                 loadingMessage.style.display = 'none';
             }
 
             if (dataToDisplay.length === 0 || !headersToShow.length) {
-                if (!errorMessage) {
-                    errorMessage = document.createElement('p');
-                    errorMessage.id = 'error-message';
-                    tableContainer.appendChild(errorMessage);
+                if (errorMessage) { // ตรวจสอบว่ามี errorMessage element อยู่
+                    errorMessage.textContent = 'ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา หรือข้อมูลในไฟล์ว่างเปล่า';
+                    errorMessage.style.display = 'block';
+                    errorMessage.style.color = 'orange';
                 }
-                errorMessage.textContent = 'ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา หรือข้อมูลในไฟล์ว่างเปล่า';
-                errorMessage.style.display = 'block';
-                errorMessage.style.color = 'orange';
                 tableContainer.querySelector('table')?.remove();
                 return;
             }
 
-            if (errorMessage) {
+            if (errorMessage) { // ตรวจสอบว่ามี errorMessage element อยู่
                 errorMessage.style.display = 'none';
             }
 
@@ -292,25 +290,22 @@
                 console.log("PapaParse Results:", results);
                 rawData = results.data;
 
+                // รับ Element อีกครั้งหลังจาก PapaParse ทำงานเสร็จ
                 const loadingMessage = document.getElementById('loading');
                 let errorMessage = document.getElementById('error-message');
 
                 if (loadingMessage) loadingMessage.style.display = 'none';
 
                 if (rawData.length === 0 || !results.meta.fields || results.meta.fields.length === 0) {
-                    if (!errorMessage) {
-                        errorMessage = document.createElement('p');
-                        errorMessage.id = 'error-message';
-                        document.getElementById('task-table-container').appendChild(errorMessage);
+                    if (errorMessage) { // ตรวจสอบว่ามี errorMessage element อยู่
+                        errorMessage.textContent = 'ไม่พบข้อมูลในไฟล์ หรือรูปแบบ Header ไม่ถูกต้อง หรือไฟล์ว่างเปล่า';
+                        errorMessage.style.display = 'block';
+                        errorMessage.style.color = 'orange';
                     }
-                    errorMessage.textContent = 'ไม่พบข้อมูลในไฟล์ หรือรูปแบบ Header ไม่ถูกต้อง หรือไฟล์ว่างเปล่า';
-                    errorMessage.style.display = 'block';
-                    errorMessage.style.color = 'orange';
                     return;
                 }
 
                 const headersToShow = getHeadersToShow();
-
                 buildTable(rawData, headersToShow);
 
                 const searchInput = document.getElementById('search-input');
@@ -324,14 +319,11 @@
 
                 if (loadingMessage) loadingMessage.style.display = 'none';
 
-                if (!errorMessage) {
-                    errorMessage = document.createElement('p');
-                    errorMessage.id = 'error-message';
-                    document.getElementById('task-table-container').appendChild(errorMessage);
+                if (errorMessage) { // ตรวจสอบว่ามี errorMessage element อยู่
+                    errorMessage.textContent = 'เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + err.message + ' โปรดตรวจสอบ URL หรือการตั้งค่าการเผยแพร่ของ Google Sheet';
+                    errorMessage.style.display = 'block';
+                    errorMessage.style.color = 'red';
                 }
-                errorMessage.textContent = 'เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + err.message + ' โปรดตรวจสอบ URL หรือการตั้งค่าการเผยแพร่ของ Google Sheet';
-                errorMessage.style.display = 'block';
-                errorMessage.style.color = 'red';
                 console.error('PapaParse Error:', err);
             }
         });
