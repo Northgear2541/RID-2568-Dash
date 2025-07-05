@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web App แสดงสถานะงาน</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
+
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            background-color: #ffffff;
+            padding: 20px 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+        }
+
+        #loading {
+            text-align: center;
+            font-size: 1.2em;
+            padding: 40px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #4a6fa5;
+            color: white;
+            font-weight: bold;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+
+        .status {
+            padding: 5px 12px;
+            border-radius: 15px;
+            color: white;
+            font-weight: bold;
+            text-align: center;
+            display: inline-block;
+            min-width: 120px;
+        }
+
+        .status-completed { background-color: #27ae60; } /* เสร็จสิ้น */
+        .status-in-progress { background-color: #2980b9; } /* กำลังดำเนินการ */
+        .status-pending { background-color: #f39c12; }    /* รอตรวจสอบ */
+        .status-cancelled { background-color: #c0392b; }  /* ยกเลิก */
+        .status-not-started { background-color: #7f8c8d; } /* ยังไม่เริ่ม */
+        .status-default { background-color: #bdc3c7; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>ตารางแสดงสถานะงาน</h1>
+        <div id="task-table-container">
+            <p id="loading">กำลังโหลดข้อมูลจาก Google Sheet...</p>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script>
+        // --- ★★★ ใส่ URL ของ CSV ที่คุณเผยแพร่ไว้ตรงนี้ ★★★ ---
+        const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRvcrOwNXXon7ub2437NZh70H6rkwxqBeS_x1QHJtzFHiS3EJ9Qk9ClY2p6GLzy2kNanEzK_MIyJW0T/pub?gid=1224553793&single=true&output=csv'; 
+        // ---------------------------------------------------------
+
+        // Function สำหรับกำหนดสีของสถานะ
+        function getStatusClass(status) {
+            const normalizedStatus = (status || '').trim();
+            if (normalizedStatus === 'เสร็จสิ้น') return 'status-completed';
+            if (normalizedStatus === 'กำลังดำเนินการ') return 'status-in-progress';
+            if (normalizedStatus === 'รอตรวจสอบ') return 'status-pending';
+            if (normalizedStatus === 'ยกเลิก') return 'status-cancelled';
+            if (normalizedStatus === 'ยังไม่เริ่ม') return 'status-not-started';
+            return 'status-default';
+        }
+
+        // ใช้ PapaParse เพื่อดึงและแปลงข้อมูล CSV
+        Papa.parse(csvUrl, {
+            download: true,
+            header: true,
+            skipEmptyLines: true,
+            complete: function(results) {
+                const tableContainer = document.getElementById('task-table-container');
+                const loadingMessage = document.getElementById('loading');
+                const data = results.data;
+                const headers = results.meta.fields.slice(0, 5); // เอาแค่คอลัมม์ A-E
+
+                if (data.length === 0) {
+                    loadingMessage.textContent = 'ไม่พบข้อมูลในไฟล์ หรือ URL ไม่ถูกต้อง';
+                    return;
+                }
+                
+                // ซ่อนข้อความ loading
+                loadingMessage.style.display = 'none';
+
+                // สร้างตาราง
+                let tableHtml = '<table><thead><tr>';
+                headers.forEach(header => {
+                    tableHtml += `<th>${header}</th>`;
+                });
+                tableHtml += '</tr></thead><tbody>';
+
+                // สร้างแถวข้อมูล
+                data.forEach(row => {
+                    tableHtml += '<tr>';
+                    headers.forEach((header, index) => {
+                        const cellData = row[header] || '';
+                        // ถ้าเป็นคอลัมม์สถานะ (คอลัมม์ที่ 5) ให้ใส่ class สำหรับสี
+                        if (header === 'สถานะ') {
+                            tableHtml += `<td><span class="status ${getStatusClass(cellData)}">${cellData}</span></td>`;
+                        } else {
+                            tableHtml += `<td>${cellData}</td>`;
+                        }
+                    });
+                    tableHtml += '</tr>';
+                });
+
+                tableHtml += '</tbody></table>';
+                
+                // แสดงตารางในหน้าเว็บ
+                tableContainer.innerHTML = tableHtml;
+            },
+            error: function(error) {
+                const loadingMessage = document.getElementById('loading');
+                loadingMessage.textContent = 'เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + error.message;
+                loadingMessage.style.color = 'red';
+            }
+        });
+    </script>
+
+</body>
+</html>
