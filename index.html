@@ -291,7 +291,8 @@
             // ดึง meta.fields จาก rawData หรือสร้าง array เปล่าถ้าไม่มี
             const allFields = rawData.length > 0 ? Object.keys(rawData[0]) : [];
             const headers = [];
-            const excludedHeaders = ['ที่อยู่อีเมล']; // คอลัมน์ที่ไม่ต้องการแสดง
+            // เพิ่ม 'ลิงก์แผนการดำเนินงานโครงการ(ประกอบสัญญาฯ)' เข้าไปใน excludedHeaders
+            const excludedHeaders = ['ที่อยู่อีเมล', 'ลิงก์แผนการดำเนินงานโครงการ(ประกอบสัญญาฯ)']; 
 
             // วนลูปผ่านทุก field ที่ PapaParse อ่านได้
             for (let i = 0; i < allFields.length; i++) {
@@ -300,9 +301,7 @@
                 if (!excludedHeaders.includes(header)) {
                     headers.push(header);
                 }
-                // ถ้าต้องการแสดงแค่ 5 คอลัมน์แรก (ไม่นับ "ที่อยู่อีเมล" ถ้ามี)
-                // สามารถเพิ่มเงื่อนไข break ตรงนี้ได้
-                // ตัวอย่าง: ถ้าต้องการแสดงแค่ 5 คอลัมน์แรกที่ไม่ใช่ "ที่อยู่อีเมล"
+                // ถ้าต้องการแสดงแค่ 5 คอลัมน์แรก (ไม่นับคอลัมน์ที่ถูก exclude)
                 if (headers.length >= 5) { // แสดง 5 คอลัมน์แรกที่ต้องการ
                     break; 
                 }
