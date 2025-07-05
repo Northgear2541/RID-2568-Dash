@@ -54,12 +54,9 @@
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
     <script>
-        // ประกาศตัวแปร global สำหรับ DataTable เพื่อให้สามารถเข้าถึงได้จากทุกที่
         let dataTable; 
 
-        // ฟังก์ชันสำหรับโหลดและอัปเดตข้อมูลในตาราง
         function loadData() {
-            // เพิ่ม Timestamp เพื่อป้องกันการแคช (Cache-Busting)
             const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRvcrOwNXXon7ub2437NZh70H6rkwxqBeS_x1QHJtzFHiS3EJ9Qk9ClY2p6GLzy2kNanEzK_MIyJW0T/pub?gid=1224553793&single=true&output=csv&t=" + new Date().getTime();
 
             fetch(csvUrl)
@@ -67,21 +64,18 @@
                 .then(text => {
                     const data = Papa.parse(text, { header: true }).data;
                     
-                    // ตรวจสอบว่า DataTables ถูกสร้างขึ้นหรือยัง
                     if ($.fn.DataTable.isDataTable('#statusTable')) {
-                        // ถ้าสร้างแล้ว ให้เคลียร์ข้อมูลเก่าและเพิ่มข้อมูลใหม่
                         dataTable.clear();
                     } else {
-                        // ถ้ายังไม่สร้าง ให้สร้าง DataTables พร้อมออปชั่นที่ต้องการ
                         dataTable = $('#statusTable').DataTable({
-                            dom: 'Bfrtip',
+                            // *** แก้ไขตรงนี้: เพิ่ม 'l' เข้าไปใน string ของ dom ***
+                            dom: 'lBfrtip', // 'l' = Length changing input (แสดง_MENU_แถว)
+                            // **************************************************
                             buttons: ['excelHtml5'],
-                            // *** ตัวเลือกการแสดงผลแถว ***
                             lengthMenu: [
                                 [10, 20, -1], 
                                 ['10 แถว', '20 แถว', 'แสดงทั้งหมด']
                             ],
-                            // ********************************
                             language: {
                                 search: "ค้นหา:", 
                                 lengthMenu: "แสดง _MENU_ แถว", 
@@ -92,7 +86,6 @@
                         });
                     }
 
-                    // เพิ่มข้อมูลใหม่ลงในตาราง DataTables
                     data.forEach(r => {
                         const t = r["ประทับเวลา"]?.trim(),
                             m = r["ชื่อเครื่องจักรตามสัญญาฯโครงการของท่าน"]?.trim(),
@@ -104,18 +97,13 @@
                         }
                     });
                     
-                    // วาดตารางใหม่ให้แสดงผล
                     dataTable.draw();
                 })
                 .catch(err => console.error("เกิดข้อผิดพลาดดึงข้อมูล CSV:", err));
         }
 
-        // เมื่อเอกสาร HTML โหลดเสร็จสมบูรณ์
         $(document).ready(function() {
-            // เรียกใช้ฟังก์ชัน loadData เพื่อโหลดข้อมูลครั้งแรกและสร้าง/อัปเดต DataTables
             loadData(); 
-            
-            // กำหนดให้โหลดข้อมูลใหม่ทุกๆ 5 นาที (300000 มิลลิวินาที)
             setInterval(loadData, 300000); 
         });
     </script>
