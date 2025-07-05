@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Web App แสดงสถานะงาน</title>
+    <title>Web App แสดงสถานะงาน (ค้นหาคำคล้าย)</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
 
@@ -30,10 +30,34 @@
             margin-bottom: 30px;
         }
 
+        #search-container {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        #search-input {
+            width: 80%;
+            max-width: 500px;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+            box-sizing: border-box;
+        }
+
         #loading {
             text-align: center;
             font-size: 1.2em;
             padding: 40px;
+            color: #555;
+        }
+        
+        #error-message {
+            text-align: center;
+            font-size: 1.1em;
+            padding: 20px;
+            color: red;
+            display: none;
         }
 
         table {
@@ -52,6 +76,9 @@
             background-color: #4a6fa5;
             color: white;
             font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
 
         tr:nth-child(even) {
@@ -62,6 +89,10 @@
             background-color: #f1f1f1;
         }
 
+        tr.hidden {
+            display: none;
+        }
+
         .status {
             padding: 5px 12px;
             border-radius: 15px;
@@ -70,22 +101,52 @@
             text-align: center;
             display: inline-block;
             min-width: 120px;
+            white-space: nowrap;
         }
 
         .status-completed { background-color: #27ae60; } /* เสร็จสิ้น */
         .status-in-progress { background-color: #2980b9; } /* กำลังดำเนินการ */
         .status-pending { background-color: #f39c12; }    /* รอตรวจสอบ */
+        .status-reviewed { background-color: #1abc9c; }   /* ตรวจสอบแล้ว */
+        .status-not-passed { background-color: #e74c3c; } /* ตรวจสอบไม่ผ่าน - NEW! */
         .status-cancelled { background-color: #c0392b; }  /* ยกเลิก */
         .status-not-started { background-color: #7f8c8d; } /* ยังไม่เริ่ม */
-        .status-default { background-color: #bdc3c7; } /* สำหรับสถานะอื่นๆ ที่ไม่ได้กำหนด */
+        .status-default { background-color: #bdc3c7; } /* สำหรับสถานะที่ไม่รู้จัก หรือสถานะหลายรายการที่ไม่เข้าเงื่อนไข */
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            .container {
+                padding: 15px;
+            }
+            th, td {
+                padding: 8px 10px;
+                font-size: 0.9em;
+            }
+            .status {
+                min-width: 90px;
+                font-size: 0.8em;
+                padding: 3px 8px;
+            }
+            #search-input {
+                width: 95%;
+            }
+        }
     </style>
 </head>
 <body>
 
     <div class="container">
         <h1>ตารางแสดงสถานะงาน</h1>
+
+        <div id="search-container">
+            <input type="text" id="search-input" placeholder="ค้นหาด้วยชื่อเครื่องจักร, รายการดำเนินการ, หรือสถานะ...">
+        </div>
+
         <div id="task-table-container">
             <p id="loading">กำลังโหลดข้อมูลจาก Google Sheet...</p>
+            <p id="error-message"></p>
         </div>
     </div>
 
@@ -95,73 +156,144 @@
         const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRvcrOwNXXon7ub2437NZh70H6rkwxqBeS_x1QHJtzFHiS3EJ9Qk9ClY2p6GLzy2kNanEzK_MIyJW0T/pub?gid=1224553793&single=true&output=csv'; 
         // ---------------------------------------------------------
 
+        let rawData = []; // เก็บข้อมูลดิบที่ได้จาก PapaParse ไว้สำหรับการกรอง
+
         // Function สำหรับกำหนดสีของสถานะ
         function getStatusClass(status) {
             const normalizedStatus = (status || '').trim();
-            if (normalizedStatus === 'เสร็จสิ้น') return 'status-completed';
-            if (normalizedStatus === 'กำลังดำเนินการ') return 'status-in-progress';
-            if (normalizedStatus === 'รอตรวจสอบ') return 'status-pending';
-            if (normalizedStatus === 'ยกเลิก') return 'status-cancelled';
-            if (normalizedStatus === 'ยังไม่เริ่ม') return 'status-not-started';
-            return 'status-default'; // ถ้าไม่ตรงกับสถานะใดๆ ให้ใช้สีเริ่มต้น
+
+            // แยกสถานะออกเป็น array หากมีหลายสถานะคั่นด้วย comma
+            const statusList = normalizedStatus.split(',').map(s => s.trim());
+
+            // ตรวจสอบสถานะตามลำดับความสำคัญ (สามารถปรับลำดับได้ตามต้องการ)
+            // สถานะที่อยู่ด้านบน จะถูกให้ความสำคัญก่อน
+            if (statusList.includes('เสร็จสิ้น')) return 'status-completed';
+            if (statusList.includes('ยกเลิก')) return 'status-cancelled'; // ถ้าถูกยกเลิก ควรเป็นสีแดง
+            if (statusList.includes('ตรวจสอบไม่ผ่าน')) return 'status-not-passed'; // เพิ่มสถานะใหม่
+            if (statusList.includes('กำลังดำเนินการ')) return 'status-in-progress';
+            if (statusList.includes('ตรวจสอบแล้ว')) return 'status-reviewed';
+            if (statusList.includes('รอตรวจสอบ')) return 'status-pending';
+            if (statusList.includes('ยังไม่เริ่ม')) return 'status-not-started';
+            
+            // ถ้าไม่เข้าเงื่อนไขใดๆ หรือเป็นสถานะที่ไม่ได้กำหนดไว้
+            return 'status-default'; 
         }
 
-        // ใช้ PapaParse เพื่อดึงและแปลงข้อมูล CSV
+        // Function สำหรับสร้างตารางจากข้อมูลที่กรองแล้ว
+        function buildTable(dataToDisplay, headersToShow) {
+            const tableContainer = document.getElementById('task-table-container');
+            const loadingMessage = document.getElementById('loading');
+            const errorMessage = document.getElementById('error-message');
+
+            loadingMessage.style.display = 'none'; // ซ่อนข้อความ loading เสมอเมื่อเรียก buildTable
+
+            if (dataToDisplay.length === 0 || !headersToShow.length) {
+                // ถ้าไม่มีข้อมูลที่จะแสดง (หลังจากกรองแล้ว หรือ CSV ว่างเปล่า)
+                errorMessage.textContent = 'ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา หรือข้อมูลในไฟล์ว่างเปล่า';
+                errorMessage.style.display = 'block';
+                errorMessage.style.color = 'orange';
+                tableContainer.innerHTML = ''; // Clear existing table
+                return;
+            }
+            
+            errorMessage.style.display = 'none'; // ซ่อนข้อความ error หากมีข้อมูล
+
+            let tableHtml = '<table><thead><tr>';
+            headersToShow.forEach(header => {
+                tableHtml += `<th>${header}</th>`;
+            });
+            tableHtml += '</tr></thead><tbody>';
+
+            dataToDisplay.forEach(row => {
+                let rowHtml = '<tr>';
+                headersToShow.forEach(header => {
+                    const cellData = row[header] || ''; // เข้าถึงข้อมูลด้วยชื่อ Header โดยตรง
+                    if (header === 'สถานะงาน') { // ใช้ชื่อ Header 'สถานะงาน' ตามภาพที่ให้มา
+                        rowHtml += `<td><span class="status ${getStatusClass(cellData)}">${cellData}</span></td>`;
+                    } else {
+                        rowHtml += `<td>${cellData}</td>`;
+                    }
+                });
+                rowHtml += '</tr>';
+                tableHtml += rowHtml;
+            });
+
+            tableHtml += '</tbody></table>';
+            
+            tableContainer.innerHTML = tableHtml;
+        }
+
+        // Function สำหรับค้นหาข้อมูลแบบคำคล้าย
+        function filterTable() {
+            const searchTerm = document.getElementById('search-input').value.trim().toLowerCase();
+            const filteredData = [];
+
+            if (searchTerm === '') {
+                // ถ้าไม่มีคำค้นหา ให้แสดงข้อมูลทั้งหมด
+                buildTable(rawData, rawData.length > 0 ? Object.keys(rawData[0]).slice(0,5) : []); 
+                return;
+            }
+
+            const fuzzyRegex = new RegExp(searchTerm.split('').join('.*'), 'i');
+
+            // --- แก้ไขตรงนี้ให้ตรงกับ fields ที่ PapaParse อ่านได้เป๊ะๆ ---
+            const searchHeaders = [
+                'ชื่อเครื่องจักรตามสัญญาฯโครงการของท่าน', 
+                'โปรดเลือกรายการที่จะดำเนินการ',          
+                'สถานะงาน'                               
+            ];
+            // -----------------------------------------------------
+
+            rawData.forEach(row => {
+                let rowMatches = false;
+                for (const header of searchHeaders) {
+                    const cellData = (row[header] || '').toLowerCase(); 
+                    if (fuzzyRegex.test(cellData)) {
+                        rowMatches = true;
+                        break;
+                    }
+                }
+                if (rowMatches) {
+                    filteredData.push(row);
+                }
+            });
+
+            buildTable(filteredData, rawData.length > 0 ? Object.keys(rawData[0]).slice(0,5) : []); 
+        }
+
+        // ดึงข้อมูลและสร้างตารางเมื่อหน้าเว็บโหลดเสร็จ
         Papa.parse(csvUrl, {
             download: true,
-            header: true, // กำหนดให้แถวแรกเป็น header
+            header: true, 
             skipEmptyLines: true,
             complete: function(results) {
-                const tableContainer = document.getElementById('task-table-container');
-                const loadingMessage = document.getElementById('loading');
-                const data = results.data;
-                
-                // ใช้ results.meta.fields แทน hardcode เพื่อให้ยืดหยุ่นมากขึ้น
-                // และกรองเฉพาะคอลัมน์ A-E (ถ้ามี)
-                const allHeaders = results.meta.fields;
-                const headersToShow = allHeaders.slice(0, 5); // จำกัดที่ 5 คอลัมน์แรก (A-E)
+                console.log("PapaParse Results:", results); 
+                rawData = results.data; 
 
-                if (data.length === 0 || !headersToShow.length) {
-                    loadingMessage.textContent = 'ไม่พบข้อมูลในไฟล์ หรือ URL ไม่ถูกต้อง หรือไฟล์ว่างเปล่า';
-                    loadingMessage.style.color = 'orange'; // เปลี่ยนสีเพื่อให้เห็นชัดเจน
+                if (rawData.length === 0 || !results.meta.fields || results.meta.fields.length === 0) {
+                    const loadingMessage = document.getElementById('loading');
+                    const errorMessage = document.getElementById('error-message');
+                    loadingMessage.style.display = 'none';
+                    errorMessage.textContent = 'ไม่พบข้อมูลในไฟล์ หรือรูปแบบ Header ไม่ถูกต้อง หรือไฟล์ว่างเปล่า';
+                    errorMessage.style.display = 'block';
+                    errorMessage.style.color = 'orange';
                     return;
                 }
-                
-                // ซ่อนข้อความ loading
-                loadingMessage.style.display = 'none';
 
-                // สร้างตาราง
-                let tableHtml = '<table><thead><tr>';
-                headersToShow.forEach(header => {
-                    tableHtml += `<th>${header}</th>`;
-                });
-                tableHtml += '</tr></thead><tbody>';
+                const headersToShow = results.meta.fields.slice(0, 5); 
 
-                // สร้างแถวข้อมูล
-                data.forEach(row => {
-                    tableHtml += '<tr>';
-                    headersToShow.forEach(header => {
-                        const cellData = row[header] || ''; // ถ้าไม่มีข้อมูลในคอลัมน์นั้น ให้เป็นสตริงว่าง
-                        // ถ้าเป็นคอลัมน์ 'สถานะ' ให้ใส่ class สำหรับสี
-                        if (header === 'สถานะ') {
-                            tableHtml += `<td><span class="status ${getStatusClass(cellData)}">${cellData}</span></td>`;
-                        } else {
-                            tableHtml += `<td>${cellData}</td>`;
-                        }
-                    });
-                    tableHtml += '</tr>';
-                });
+                buildTable(rawData, headersToShow);
 
-                tableHtml += '</tbody></table>';
-                
-                // แสดงตารางในหน้าเว็บ
-                tableContainer.innerHTML = tableHtml;
+                document.getElementById('search-input').addEventListener('keyup', filterTable);
             },
             error: function(err) {
                 const loadingMessage = document.getElementById('loading');
-                loadingMessage.textContent = 'เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + err.message + ' โปรดตรวจสอบ URL หรือการตั้งค่าการเผยแพร่ของ Google Sheet';
-                loadingMessage.style.color = 'red';
-                console.error('PapaParse Error:', err); // แสดงข้อผิดพลาดใน console เพื่อการดีบัก
+                const errorMessage = document.getElementById('error-message');
+                loadingMessage.style.display = 'none';
+                errorMessage.textContent = 'เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + err.message + ' โปรดตรวจสอบ URL หรือการตั้งค่าการเผยแพร่ของ Google Sheet';
+                errorMessage.style.display = 'block';
+                errorMessage.style.color = 'red';
+                console.error('PapaParse Error:', err);
             }
         });
     </script>
