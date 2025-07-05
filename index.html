@@ -1,331 +1,114 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Web App แสดงสถานะงาน (ค้นหาคำคล้าย)</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
-
-        body {
-            font-family: 'Sarabun', sans-serif;
-            background-color: #f4f7f6;
-            color: #333;
-            margin: 0;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: auto;
-            background-color: #ffffff;
-            padding: 20px 40px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-
-        h1 {
-            text-align: center;
-            color: #2c3e50;
-            margin-bottom: 30px;
-        }
-
-        #search-container {
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        #search-input {
-            width: 80%;
-            max-width: 500px;
-            padding: 10px 15px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 1em;
-            box-sizing: border-box;
-        }
-
-        #search-hint {
-            display: block;
-            margin-top: 5px;
-            font-size: 0.8em;
-            color: #777;
-        }
-
-        /* Initial state of messages, will be managed by JS */
-        #loading {
-            text-align: center;
-            font-size: 1.2em;
-            padding: 40px;
-            color: #555;
-        }
-
-        #error-message {
-            text-align: center;
-            font-size: 1.1em;
-            padding: 20px;
-            color: red;
-            display: none; /* Initially hidden */
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-
-        th, td {
-            padding: 12px 15px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-
-        th {
-            background-color: #4a6fa5;
-            color: white;
-            font-weight: bold;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-
-        tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-
-        tr:hover {
-            background-color: #f1f1f1;
-        }
-
-        tr.hidden {
-            display: none;
-        }
-
-        .status {
-            padding: 5px 12px;
-            border-radius: 15px;
-            color: white;
-            font-weight: bold;
-            text-align: center;
-            display: inline-block;
-            min-width: 120px;
-            white-space: nowrap;
-        }
-
-        .status-completed { background-color: #27ae60; }
-        .status-in-progress { background-color: #2980b9; }
-        .status-pending { background-color: #f39c12; }
-        .status-reviewed { background-color: #1abc9c; }
-        .status-not-passed { background-color: #e74c3c; }
-        .status-cancelled { background-color: #c0392b; }
-        .status-not-started { background-color: #7f8c8d; }
-        .status-default { background-color: #bdc3c7; }
-
-        @media (max-width: 768px) {
-            body {
-                padding: 10px;
-            }
-            .container {
-                padding: 15px;
-            }
-            th, td {
-                padding: 8px 10px;
-                font-size: 0.9em;
-            }
-            .status {
-                min-width: 90px;
-                font-size: 0.8em;
-                padding: 3px 8px;
-            }
-            #search-input {
-                width: 95%;
-            }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Dashboard สถานะงาน</title>
+  <!-- Font Thai -->
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun&display=swap" rel="stylesheet">
+  <!-- DataTables CSS -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css">
+  <style>
+    body {
+      font-family: 'Sarabun', sans-serif;
+      background: #f0f0f0;
+      padding: 20px;
+    }
+    h2 {
+      margin-bottom: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .status-รอตรวจสอบ { background-color: #FFF3CD; }
+    .status-ตรวจสอบผ่าน { background-color: #D4EDDA; }
+    .status-ตรวจสอบไม่ผ่าน { background-color: #F8D7DA; }
+    .status-วางบิล { background-color: #E0E0E0; }
+    .status-จ่ายเงิน { background-color: #D1ECF1; }
+    .status-อยู่ระหว่างตรวจ { background-color: #FFE0B2; }
+    .status-อนุมัติจัดพิมพ์ { background-color: #C8E6C9; }
+    .status-ตรวจติดตามผ่าน { background-color: #B2DFDB; }
+    .status-ตรวจติดตามไม่ผ่าน { background-color: #FFCDD2; }
+    .status-ตรวจประเมินผ่าน { background-color: #C5E1A5; }
+    .status-ตรวจประเมินไม่ผ่าน { background-color: #EF9A9A; }
+    .status-ปิดโครงการ { background-color: #BDBDBD; }
+  </style>
 </head>
 <body>
 
-    <div class="container">
-        <h1>ตารางแสดงสถานะงาน</h1>
+  <h2>Dashboard สถานะงาน</h2>
 
-        <div id="search-container">
-            <input type="text" id="search-input" placeholder="พิมพ์คำค้นหา...">
-            <span id="search-hint">ค้นหาโดยพิมพ์ตัวอักษรอย่างน้อย 2 ตัวอักษร</span>
-        </div>
+  <table id="statusTable" class="display nowrap" style="width:100%">
+    <thead>
+      <tr>
+        <th>ลำดับ (A)</th>
+        <th>ชื่องาน (C)</th>
+        <th>ผู้รับผิดชอบ (D)</th>
+        <th>สถานะงาน (E)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- จะถูกเติมข้อมูลโดย JS -->
+    </tbody>
+  </table>
 
-        <div id="task-table-container">
-            <p id="loading">กำลังโหลดข้อมูลจาก Google Sheet...</p>
-            <p id="error-message" style="display:none;"></p>
-        </div>
-    </div>
+  <!-- jQuery + DataTables -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-    <script>
-        const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRvcrOwNXXon7ub2437NZh70H6rkwxqBeS_x1QHJtzFHiS3EJ9Qk9ClY2p6GLzy2kNanEzK_MIyJW0T/pub?gid=1224553793&single=true&output=csv';
+  <script>
+    const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRvcrOwNXXon7ub2437NZh70H6rkwxqBeS_x1QHJtzFHiS3EJ9Qk9ClY2p6GLzy2kNanEzK_MIyJW0T/pub?gid=1224553793&single=true&output=csv";
 
-        let rawData = [];
-        let loadingMessageElement, errorMessageElement; // เปลี่ยนชื่อตัวแปรให้ชัดเจนขึ้น
+    fetch(csvUrl)
+      .then(res => res.text())
+      .then(data => {
+        const rows = data.split("\n").slice(1); // ข้าม header
+        const tbody = document.querySelector("#statusTable tbody");
 
-        function getStatusClass(status) {
-            const normalizedStatus = (status || '').trim();
-            const statusList = normalizedStatus.split(',').map(s => s.trim());
+        rows.forEach(row => {
+          const cols = row.split(",");
+          const colA = cols[0]?.trim();
+          const colC = cols[2]?.trim();
+          const colD = cols[3]?.trim();
+          const colE = cols[4]?.trim();
 
-            if (statusList.includes('เสร็จสิ้น')) return 'status-completed';
-            if (statusList.includes('ยกเลิก')) return 'status-cancelled';
-            if (statusList.includes('ตรวจสอบไม่ผ่าน')) return 'status-not-passed';
-            if (statusList.includes('กำลังดำเนินการ')) return 'status-in-progress';
-            if (statusList.includes('ตรวจสอบแล้ว')) return 'status-reviewed';
-            if (statusList.includes('รอตรวจสอบ')) return 'status-pending';
-            if (statusList.includes('ยังไม่เริ่ม')) return 'status-not-started';
-
-            return 'status-default';
-        }
-
-        function buildTable(dataToDisplay, headersToShow) {
-            const tableContainer = document.getElementById('task-table-container');
-
-            // ตรวจสอบว่า Element มีอยู่จริงก่อนจะพยายามเข้าถึง style
-            if (loadingMessageElement) {
-                loadingMessageElement.style.display = 'none';
-            }
-
-            if (dataToDisplay.length === 0 || !headersToShow.length) {
-                if (errorMessageElement) {
-                    errorMessageElement.textContent = 'ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา หรือข้อมูลในไฟล์ว่างเปล่า';
-                    errorMessageElement.style.display = 'block';
-                    errorMessageElement.style.color = 'orange';
-                }
-                tableContainer.querySelector('table')?.remove();
-                return;
-            }
-
-            // ตรวจสอบว่า Element มีอยู่จริงก่อนจะพยายามเข้าถึง style
-            if (errorMessageElement) {
-                errorMessageElement.style.display = 'none';
-            }
-
-            let tableHtml = '<table><thead><tr>';
-            headersToShow.forEach(header => {
-                tableHtml += `<th>${header}</th>`;
-            });
-            tableHtml += '</tr></thead><tbody>';
-
-            dataToDisplay.forEach(row => {
-                let rowHtml = '<tr>';
-                headersToShow.forEach(header => {
-                    const cellData = row.hasOwnProperty(header) ? row[header] : '';
-                    if (header === 'สถานะงาน') {
-                        rowHtml += `<td><span class="status ${getStatusClass(cellData)}">${cellData}</span></td>`;
-                    } else {
-                        rowHtml += `<td>${cellData}</td>`;
-                    }
-                });
-                rowHtml += '</tr>';
-                tableHtml += rowHtml;
-            });
-
-            tableHtml += '</tbody></table>';
-
-            tableContainer.querySelector('table')?.remove();
-            tableContainer.innerHTML += tableHtml;
-        }
-
-        function filterTable() {
-            const searchTerm = document.getElementById('search-input').value.trim().toLowerCase();
-            const filteredData = [];
-
-            if (searchTerm.length < 2 && searchTerm !== '') {
-                buildTable(rawData, getHeadersToShow());
-                return;
-            }
-
-            if (searchTerm === '') {
-                buildTable(rawData, getHeadersToShow());
-                return;
-            }
-
-            const fuzzyRegex = new RegExp(searchTerm.split('').join('.*'), 'i');
-
-            const searchHeaders = [
-                'ชื่อเครื่องจักรตามสัญญาฯโครงการของท่าน',
-                'โปรดเลือกรายการที่จะดำเนินการ',
-                'สถานะงาน'
-            ];
-
-            rawData.forEach(row => {
-                let rowMatches = false;
-                for (const header of searchHeaders) {
-                    if (row.hasOwnProperty(header)) {
-                        const cellData = (row[header] || '').toLowerCase();
-                        if (fuzzyRegex.test(cellData)) {
-                            rowMatches = true;
-                            break;
-                        }
-                    }
-                }
-                if (rowMatches) {
-                    filteredData.push(row);
-                }
-            });
-
-            buildTable(filteredData, getHeadersToShow());
-        }
-
-        function getHeadersToShow() {
-            const desiredHeaders = [
-                'ประทับเวลา',
-                'ชื่อเครื่องจักรตามสัญญาฯโครงการของท่าน',
-                'โปรดเลือกรายการที่จะดำเนินการ',
-                'สถานะงาน'
-            ];
-            return desiredHeaders;
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            // ดึง Element มาเก็บไว้ในตัวแปร หลัง DOM โหลดเสร็จเท่านั้น
-            loadingMessageElement = document.getElementById('loading'); // เปลี่ยนชื่อตัวแปร
-            errorMessageElement = document.getElementById('error-message'); // เปลี่ยนชื่อตัวแปร
-
-            Papa.parse(csvUrl, {
-                download: true,
-                header: true,
-                skipEmptyLines: true,
-                complete: function(results) {
-                    console.log("PapaParse Results:", results);
-                    rawData = results.data;
-
-                    if (loadingMessageElement) loadingMessageElement.style.display = 'none'; // ใช้ตัวแปรใหม่
-
-                    if (rawData.length === 0 || !results.meta.fields || results.meta.fields.length === 0) {
-                        if (errorMessageElement) { // ใช้ตัวแปรใหม่
-                            errorMessageElement.textContent = 'ไม่พบข้อมูลในไฟล์ หรือรูปแบบ Header ไม่ถูกต้อง หรือไฟล์ว่างเปล่า';
-                            errorMessageElement.style.display = 'block';
-                            errorMessageElement.style.color = 'orange';
-                        }
-                        return;
-                    }
-
-                    const headersToShow = getHeadersToShow();
-                    buildTable(rawData, headersToShow);
-
-                    const searchInput = document.getElementById('search-input');
-                    if (searchInput) {
-                        searchInput.addEventListener('keyup', filterTable);
-                    }
-                },
-                error: function(err) {
-                    if (loadingMessageElement) loadingMessageElement.style.display = 'none'; // ใช้ตัวแปรใหม่
-
-                    if (errorMessageElement) { // ใช้ตัวแปรใหม่
-                        errorMessageElement.textContent = 'เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + err.message + ' โปรดตรวจสอบ URL หรือการตั้งค่าการเผยแพร่ของ Google Sheet';
-                        errorMessageElement.style.display = 'block';
-                        errorMessageElement.style.color = 'red';
-                    }
-                    console.error('PapaParse Error:', err);
-                }
-            });
+          if (colA && colC && colD && colE) {
+            const tr = document.createElement("tr");
+            tr.className = "status-" + colE;
+            tr.innerHTML = `
+              <td>${colA}</td>
+              <td>${colC}</td>
+              <td>${colD}</td>
+              <td>${colE}</td>
+            `;
+            tbody.appendChild(tr);
+          }
         });
-    </script>
+
+        // โหลด DataTable หลังจากข้อมูลมาแล้ว
+        $('#statusTable').DataTable({
+          dom: 'Bfrtip',
+          buttons: ['excelHtml5'],
+          language: {
+            search: "ค้นหา:",
+            lengthMenu: "แสดง _MENU_ แถวต่อหน้า",
+            info: "แสดง _START_ ถึง _END_ จากทั้งหมด _TOTAL_ แถว",
+            infoEmpty: "ไม่มีข้อมูลให้แสดง",
+            zeroRecords: "ไม่พบข้อมูลที่ค้นหา",
+            paginate: {
+              first: "หน้าแรก",
+              last: "หน้าสุดท้าย",
+              next: "ถัดไป",
+              previous: "ก่อนหน้า"
+            }
+          }
+        });
+      });
+  </script>
 
 </body>
 </html>
