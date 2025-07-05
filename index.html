@@ -104,14 +104,14 @@
             white-space: nowrap;
         }
 
-/* ในส่วน <style> ของคุณ */
-.status-completed { background-color: #27ae60; } /* เสร็จสิ้น */
-.status-in-progress { background-color: #2980b9; } /* กำลังดำเนินการ */
-.status-pending { background-color: #f39c12; }    /* รอตรวจสอบ (ปรับสีถ้าไม่ตรง) */
-.status-reviewed { background-color: #1abc9c; }   /* ตรวจสอบแล้ว (ปรับสีถ้าไม่ตรง) */
-.status-cancelled { background-color: #c0392b; }  /* ยกเลิก */
-.status-not-started { background-color: #7f8c8d; } /* ยังไม่เริ่ม */
-.status-default { background-color: #bdc3c7; }
+        .status-completed { background-color: #27ae60; } /* เสร็จสิ้น */
+        .status-in-progress { background-color: #2980b9; } /* กำลังดำเนินการ */
+        .status-pending { background-color: #f39c12; }    /* รอตรวจสอบ */
+        .status-reviewed { background-color: #1abc9c; }   /* ตรวจสอบแล้ว */
+        .status-not-passed { background-color: #e74c3c; } /* ตรวจสอบไม่ผ่าน - NEW! */
+        .status-cancelled { background-color: #c0392b; }  /* ยกเลิก */
+        .status-not-started { background-color: #7f8c8d; } /* ยังไม่เริ่ม */
+        .status-default { background-color: #bdc3c7; } /* สำหรับสถานะที่ไม่รู้จัก หรือสถานะหลายรายการที่ไม่เข้าเงื่อนไข */
 
         @media (max-width: 768px) {
             body {
@@ -153,7 +153,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <script>
         // --- ★★★ ใส่ URL ของ CSV ที่คุณเผยแพร่ไว้ตรงนี้ ★★★ ---
-        // ใช้ URL ล่าสุดที่คุณได้รับจากการเผยแพร่ Google Sheet ของคุณ
         const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRvcrOwNXXon7ub2437NZh70H6rkwxqBeS_x1QHJtzFHiS3EJ9Qk9ClY2p6GLzy2kNanEzK_MIyJW0T/pub?gid=1224553793&single=true&output=csv'; 
         // ---------------------------------------------------------
 
@@ -162,13 +161,22 @@
         // Function สำหรับกำหนดสีของสถานะ
         function getStatusClass(status) {
             const normalizedStatus = (status || '').trim();
-            if (normalizedStatus === 'เสร็จสิ้น') return 'status-completed';
-            if (normalizedStatus === 'กำลังดำเนินการ') return 'status-in-progress';
-            if (normalizedStatus === 'รอตรวจสอบ') return 'status-pending';
-            if (normalizedStatus === 'ตรวจสอบแล้ว') return 'status-reviewed'; // NEW! สำหรับสถานะ 'ตรวจสอบแล้ว'
-            if (normalizedStatus === 'ยกเลิก') return 'status-cancelled';
-            if (normalizedStatus === 'ยังไม่เริ่ม') return 'status-not-started';
-            return 'status-default';
+
+            // แยกสถานะออกเป็น array หากมีหลายสถานะคั่นด้วย comma
+            const statusList = normalizedStatus.split(',').map(s => s.trim());
+
+            // ตรวจสอบสถานะตามลำดับความสำคัญ (สามารถปรับลำดับได้ตามต้องการ)
+            // สถานะที่อยู่ด้านบน จะถูกให้ความสำคัญก่อน
+            if (statusList.includes('เสร็จสิ้น')) return 'status-completed';
+            if (statusList.includes('ยกเลิก')) return 'status-cancelled'; // ถ้าถูกยกเลิก ควรเป็นสีแดง
+            if (statusList.includes('ตรวจสอบไม่ผ่าน')) return 'status-not-passed'; // เพิ่มสถานะใหม่
+            if (statusList.includes('กำลังดำเนินการ')) return 'status-in-progress';
+            if (statusList.includes('ตรวจสอบแล้ว')) return 'status-reviewed';
+            if (statusList.includes('รอตรวจสอบ')) return 'status-pending';
+            if (statusList.includes('ยังไม่เริ่ม')) return 'status-not-started';
+            
+            // ถ้าไม่เข้าเงื่อนไขใดๆ หรือเป็นสถานะที่ไม่ได้กำหนดไว้
+            return 'status-default'; 
         }
 
         // Function สำหรับสร้างตารางจากข้อมูลที่กรองแล้ว
@@ -222,18 +230,17 @@
 
             if (searchTerm === '') {
                 // ถ้าไม่มีคำค้นหา ให้แสดงข้อมูลทั้งหมด
-                buildTable(rawData, rawData.length > 0 ? Object.keys(rawData[0]).slice(0,5) : []); // Rebuild with original data
+                buildTable(rawData, rawData.length > 0 ? Object.keys(rawData[0]).slice(0,5) : []); 
                 return;
             }
 
             const fuzzyRegex = new RegExp(searchTerm.split('').join('.*'), 'i');
 
             // กำหนดชื่อ Header ที่เราต้องการให้ค้นหา (ตามชื่อ Header จริงๆ ใน Google Sheet ของคุณ)
-            // อ้างอิงจากภาพ Google Sheet ที่คุณให้มา
             const searchHeaders = [
-                'ชื่อเครื่องจักร/คำสัญญา/ทางราชการ/ของที่', // คอลัมน์ B
-                'โปรดเลือกร้านค้าที่จะดำเนินกา',            // คอลัมน์ C (รายการดำเนินการ)
-                'สถานะงาน'                               // คอลัมน์ E
+                'ชื่อเครื่องจักร/คำสัญญา/ทางราชการ/ของที่', // คอลัมน์ B (ตามภาพ)
+                'โปรดเลือกรายการที่จะดำเนินการ',            // คอลัมน์ C (ปรับชื่อให้ตรงกับภาพ)
+                'สถานะงาน'                               // คอลัมน์ E (ตามภาพ)
             ];
 
             rawData.forEach(row => {
@@ -251,24 +258,19 @@
             });
 
             // สร้างตารางใหม่ด้วยข้อมูลที่กรองแล้ว
-            buildTable(filteredData, rawData.length > 0 ? Object.keys(rawData[0]).slice(0,5) : []); // ใช้ Headers เดิมในการแสดงผล
+            buildTable(filteredData, rawData.length > 0 ? Object.keys(rawData[0]).slice(0,5) : []); 
         }
 
 
         // ดึงข้อมูลและสร้างตารางเมื่อหน้าเว็บโหลดเสร็จ
         Papa.parse(csvUrl, {
             download: true,
-            header: true, // สำคัญ: กำหนดให้แถวแรกเป็น Header
+            header: true, 
             skipEmptyLines: true,
             complete: function(results) {
-                // *** เพิ่มบรรทัดนี้ ***
                 console.log("PapaParse Results:", results); 
-                // **********************
+                rawData = results.data; 
 
-                rawData = results.data; // เก็บข้อมูลดิบไว้
-
-                // ตรวจสอบว่า PapaParse อ่าน Header ได้ถูกต้องหรือไม่
-                // และตรวจสอบว่ามีข้อมูลจริง ๆ หลังการ Parse หรือไม่
                 if (rawData.length === 0 || !results.meta.fields || results.meta.fields.length === 0) {
                     const loadingMessage = document.getElementById('loading');
                     const errorMessage = document.getElementById('error-message');
@@ -279,13 +281,10 @@
                     return;
                 }
 
-                // ดึง Headers ที่ PapaParse อ่านได้ และเลือก 5 คอลัมน์แรก
                 const headersToShow = results.meta.fields.slice(0, 5); 
 
-                // สร้างตารางครั้งแรกด้วยข้อมูลทั้งหมด
                 buildTable(rawData, headersToShow);
 
-                // เพิ่ม Event Listener สำหรับช่องค้นหา
                 document.getElementById('search-input').addEventListener('keyup', filterTable);
             },
             error: function(err) {
