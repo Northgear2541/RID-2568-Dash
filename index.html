@@ -182,21 +182,28 @@
         // Function สำหรับสร้างตารางจากข้อมูลที่กรองแล้ว
         function buildTable(dataToDisplay, headersToShow) {
             const tableContainer = document.getElementById('task-table-container');
-            const loadingMessage = document.getElementById('loading');
-            const errorMessage = document.getElementById('error-message');
+            // สร้างหรือดึง element ข้อความต่างๆ ขึ้นมาใหม่ทุกครั้งที่เรียก buildTable
+            // เพื่อป้องกันปัญหา null เมื่อ HTML ถูกล้างแล้ว
+            let loadingMessage = document.getElementById('loading');
+            let errorMessage = document.getElementById('error-message');
 
-            loadingMessage.style.display = 'none'; // ซ่อนข้อความ loading เสมอเมื่อเรียก buildTable
+            // ตรวจสอบว่า element มีอยู่จริงก่อนจะทำการเปลี่ยน style
+            if (loadingMessage) {
+                loadingMessage.style.display = 'none'; // ซ่อนข้อความ loading เสมอเมื่อเรียก buildTable
+            }
 
             if (dataToDisplay.length === 0 || !headersToShow.length) {
                 // ถ้าไม่มีข้อมูลที่จะแสดง (หลังจากกรองแล้ว หรือ CSV ว่างเปล่า)
-                errorMessage.textContent = 'ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา หรือข้อมูลในไฟล์ว่างเปล่า';
-                errorMessage.style.display = 'block';
-                errorMessage.style.color = 'orange';
-                tableContainer.innerHTML = ''; // Clear existing table
+                tableContainer.innerHTML = `
+                    <p id="loading" style="display:none;">กำลังโหลดข้อมูลจาก Google Sheet...</p>
+                    <p id="error-message" style="display:block; color:orange;">ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา หรือข้อมูลในไฟล์ว่างเปล่า</p>
+                `;
                 return;
             }
             
-            errorMessage.style.display = 'none'; // ซ่อนข้อความ error หากมีข้อมูล
+            if (errorMessage) {
+                errorMessage.style.display = 'none'; // ซ่อนข้อความ error หากมีข้อมูล
+            }
 
             let tableHtml = '<table><thead><tr>';
             headersToShow.forEach(header => {
@@ -208,7 +215,7 @@
                 let rowHtml = '<tr>';
                 headersToShow.forEach(header => {
                     const cellData = row[header] || ''; // เข้าถึงข้อมูลด้วยชื่อ Header โดยตรง
-                    if (header === 'สถานะงาน') { // ใช้ชื่อ Header 'สถานะงาน' ตามภาพที่ให้มา
+                    if (header === 'สถานะงาน') { 
                         rowHtml += `<td><span class="status ${getStatusClass(cellData)}">${cellData}</span></td>`;
                     } else {
                         rowHtml += `<td>${cellData}</td>`;
@@ -247,10 +254,13 @@
             rawData.forEach(row => {
                 let rowMatches = false;
                 for (const header of searchHeaders) {
-                    const cellData = (row[header] || '').toLowerCase(); 
-                    if (fuzzyRegex.test(cellData)) {
-                        rowMatches = true;
-                        break;
+                    // ตรวจสอบว่า header นั้นมีอยู่ใน row ก่อนที่จะพยายามเข้าถึง
+                    if (row[header] !== undefined) {
+                        const cellData = (row[header] || '').toLowerCase(); 
+                        if (fuzzyRegex.test(cellData)) {
+                            rowMatches = true;
+                            break;
+                        }
                     }
                 }
                 if (rowMatches) {
@@ -273,10 +283,14 @@
                 if (rawData.length === 0 || !results.meta.fields || results.meta.fields.length === 0) {
                     const loadingMessage = document.getElementById('loading');
                     const errorMessage = document.getElementById('error-message');
-                    loadingMessage.style.display = 'none';
-                    errorMessage.textContent = 'ไม่พบข้อมูลในไฟล์ หรือรูปแบบ Header ไม่ถูกต้อง หรือไฟล์ว่างเปล่า';
-                    errorMessage.style.display = 'block';
-                    errorMessage.style.color = 'orange';
+                    if (loadingMessage) loadingMessage.style.display = 'none';
+                    if (errorMessage) {
+                         errorMessage.textContent = 'ไม่พบข้อมูลในไฟล์ หรือรูปแบบ Header ไม่ถูกต้อง หรือไฟล์ว่างเปล่า';
+                         errorMessage.style.display = 'block';
+                         errorMessage.style.color = 'orange';
+                    } else { // Fallback if error message element doesn't exist
+                        document.getElementById('task-table-container').innerHTML = `<p style="color:orange;">ไม่พบข้อมูลในไฟล์ หรือรูปแบบ Header ไม่ถูกต้อง หรือไฟล์ว่างเปล่า</p>`;
+                    }
                     return;
                 }
 
@@ -289,10 +303,14 @@
             error: function(err) {
                 const loadingMessage = document.getElementById('loading');
                 const errorMessage = document.getElementById('error-message');
-                loadingMessage.style.display = 'none';
-                errorMessage.textContent = 'เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + err.message + ' โปรดตรวจสอบ URL หรือการตั้งค่าการเผยแพร่ของ Google Sheet';
-                errorMessage.style.display = 'block';
-                errorMessage.style.color = 'red';
+                if (loadingMessage) loadingMessage.style.display = 'none';
+                if (errorMessage) {
+                    errorMessage.textContent = 'เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + err.message + ' โปรดตรวจสอบ URL หรือการตั้งค่าการเผยแพร่ของ Google Sheet';
+                    errorMessage.style.display = 'block';
+                    errorMessage.style.color = 'red';
+                } else { // Fallback if error message element doesn't exist
+                    document.getElementById('task-table-container').innerHTML = `<p style="color:red;">เกิดข้อผิดพลาดในการโหลดข้อมูล: ${err.message}</p>`;
+                }
                 console.error('PapaParse Error:', err);
             }
         });
