@@ -164,7 +164,7 @@
         const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRvcrOwNXXon7ub2437NZh70H6rkwxqBeS_x1QHJtzFHiS3EJ9Qk9ClY2p6GLzy2kNanEzK_MIyJW0T/pub?gid=1224553793&single=true&output=csv';
 
         let rawData = [];
-        let loadingMessage, errorMessage; // ประกาศตัวแปรเพื่อให้เข้าถึงได้ทั่วถึง
+        let loadingMessage, errorMessage; 
 
         function getStatusClass(status) {
             const normalizedStatus = (status || '').trim();
@@ -279,9 +279,7 @@
             return desiredHeaders;
         }
 
-        // *** ย้ายโค้ดทั้งหมดมาไว้ใน DOMContentLoaded ***
         document.addEventListener('DOMContentLoaded', () => {
-            // ดึง Element มาเก็บไว้ในตัวแปร หลัง DOM โหลดเสร็จเท่านั้น
             loadingMessage = document.getElementById('loading');
             errorMessage = document.getElementById('error-message');
 
