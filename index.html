@@ -2,66 +2,146 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard สถานะงาน</title>
+    <title>Dashboard ติดตามสถานะงาน</title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun&display=swap" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Th+Sarabun+PSK&display=swap');
 
-        body { 
+        body {
             font-family: 'Th Sarabun PSK', 'Sarabun', sans-serif;
-            background: #f0f0f0; 
-            padding: 20px; 
-            font-size: 18px; 
+            background: #f0f0f0;
+            padding: 20px;
+            font-size: 18px;
         }
         table { width:100%; border-collapse: collapse; }
         #statusTable, #statusTable th, #statusTable td {
             font-family: 'Th Sarabun PSK', 'Sarabun', sans-serif !important;
-            font-size: 16px; 
+            font-size: 16px;
         }
         /* Style for column filters */
-        #statusTable tfoot input, #statusTable tfoot select {
+        .column-filter-input, .column-filter-select {
             width: 100%;
             padding: 3px;
             box-sizing: border-box;
             border: 1px solid #ccc;
             border-radius: 3px;
-            font-family: 'Th Sarabun PSK', sans-serif; /* Ensure filter inputs also use the font */
-            font-size: 14px; /* Adjust size for filters */
+            font-family: 'Th Sarabun PSK', sans-serif;
+            font-size: 14px;
         }
-        /* Color styles for background */
-        .status-รอตรวจสอบ { background-color: #FFF3CD; }
-        .status-ตรวจสอบผ่าน { background-color: #D4EDDA; }
-        .status-วางบิล { background-color: #E0E0E0; }
-        .status-จ่ายเงิน { background-color: #D1ECF1; }
-        .status-อยู่ระหว่างตรวจ { background-color: #FFE0B2; }
-        .status-อนุมัติจัดพิมพ์ { background-color: #C8E6C9; }
-        .status-ตรวจติดตามผ่าน { background-color: #B2DFDB; }
-        .status-ตรวจประเมินผ่าน { background-color: #C5E1A5; }
-        .status-ปิดโครงการ { background-color: #BDBDBD; }
 
-        /* === เพิ่ม/แก้ไข CSS สำหรับสีตัวอักษรเป็นสีแดง === */
-        .status-ส่งเข้าระบบซ้ำกัน,
-        .status-ตรวจสอบไม่ผ่าน,
-        .status-ตรวจติดตามไม่ผ่าน,
-        .status-ตรวจประเมินไม่ผ่าน { 
-            background-color: #F8D7DA; /* อาจจะใช้สีแดงอ่อนเดิม หรือเปลี่ยนเป็นสีอื่น */
-            color: red; /* กำหนดสีตัวอักษรเป็นสีแดง */
-            font-weight: bold; /* อาจจะเพิ่มตัวหนาเพื่อเน้นมากขึ้น */
+        /* Container สำหรับแถบกรองข้อมูลแต่ละคอลัมน์ */
+        #filterContainer {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px; /* ระยะห่างระหว่าง filter กับตาราง */
+            padding: 10px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            flex-wrap: wrap;
         }
-        /* ถ้าสถานะ 'ตรวจสอบไม่ผ่าน' มีการกำหนด background-color เดิมอยู่แล้ว
-           ให้มั่นใจว่า class 'status-ตรวจสอบไม่ผ่าน' ที่มี 'color: red;' อยู่ข้างล่างหรือมี !important */
-        /* หรือคุณสามารถกำหนด background-color ใหม่สำหรับสถานะเหล่านี้ได้เลย */
-        /* ตัวอย่าง: ถ้าต้องการพื้นหลังสีชมพูอ่อน และตัวอักษรสีแดง */
-        /* .status-ตรวจสอบไม่ผ่าน { background-color: #FFCDD2; color: red; font-weight: bold; } */
-        /* สำหรับ 'ตรวจสอบไม่ผ่าน' และ 'ตรวจติดตามไม่ผ่าน' ผมได้กำหนด background-color เดิมไว้แล้ว
-           ดังนั้นแค่เพิ่ม color: red; ก็พอ แต่ผมรวมไว้ในกลุ่มเดียวกัน */
+
+        #filterContainer > div {
+            flex: 1;
+            min-width: 150px;
+            flex-basis: 23%;
+            max-width: 25%;
+        }
+
+        @media (max-width: 768px) {
+            #filterContainer > div {
+                flex-basis: 48%;
+                max-width: 50%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            #filterContainer > div {
+                flex-basis: 100%;
+                max-width: 100%;
+            }
+        }
+
+        #filterContainer label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            font-size: 14px;
+            color: #555;
+        }
+
+        /* Custom text colors for 'สถานะงาน' column */
+        .status-text-red { color: red !important; font-weight: bold; }
+        .status-text-yellow { color: #FFA500 !important; font-weight: bold; } /* #FFA500 คือสีส้ม */
+        .status-text-blue { color: #0000FF !important; font-weight: bold; }
+        .status-text-green { color: green !important; font-weight: bold; }
+        .status-text-purple { color: purple !important; font-weight: bold; } /* เพิ่ม class สีม่วง */
+
+        /* --- NEW/ADJUSTED CSS for positioning --- */
+        /* DataTables global filter (search bar) */
+        .dataTables_filter {
+            float: right; /* ชิดขวา */
+            margin-bottom: 15px; /* ระยะห่างจาก filterContainer ด้านล่าง */
+            margin-top: 5px; /* ระยะห่างจาก h2 */
+        }
+
+        /* DataTables length menu and buttons */
+        .dataTables_length, .dt-buttons {
+            float: left; /* ชิดซ้าย */
+            margin-top: 5px;
+            margin-bottom: 15px; /* ให้มีระยะห่างจาก filterContainer */
+        }
+        .dt-buttons {
+            margin-left: 10px; /* เพิ่มระยะห่างระหว่าง Length menu กับปุ่ม Excel */
+        }
+
+        /* Clearfix for DataTables wrapper to prevent layout issues with floats */
+        .dataTables_wrapper::after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+
+        /* Adjust some default DataTables margins if needed */
+        .dataTables_wrapper .dataTables_info,
+        .dataTables_wrapper .dataTables_paginate {
+            margin-top: 0.5em;
+            margin-bottom: 0.5em;
+        }
 
     </style>
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css">
 </head>
 <body>
-    <h2>Dashboard สถานะงาน</h2>
+    <h2>Dashboard ติดตามสถานะงาน</h2>
+
+    <div id="filterContainer">
+        <div>
+            <label for="filterCol0">ประทับเวลา:</label>
+            <select id="filterCol0" class="column-filter-select">
+                <option value="">--เลือก--</option>
+            </select>
+        </div>
+        <div>
+            <label for="filterCol1">ชื่อเครื่องจักร:</label>
+            <select id="filterCol1" class="column-filter-select">
+                <option value="">--เลือก--</option>
+            </select>
+        </div>
+        <div>
+            <label for="filterCol2">รายการดำเนินการ:</label>
+            <select id="filterCol2" class="column-filter-select">
+                <option value="">--เลือก--</option>
+            </select>
+        </div>
+        <div>
+            <label for="filterCol3">สถานะงาน:</label>
+            <select id="filterCol3" class="column-filter-select">
+                <option value="">--เลือก--</option>
+            </select>
+        </div>
+    </div>
     <table id="statusTable" class="display nowrap">
         <thead>
             <tr>
@@ -72,14 +152,6 @@
             </tr>
         </thead>
         <tbody></tbody>
-        <tfoot>
-            <tr>
-                <th>ประทับเวลา</th>
-                <th>ชื่อเครื่องจักร</th>
-                <th>รายการดำเนินการ</th>
-                <th>สถานะงาน</th>
-            </tr>
-        </tfoot>
     </table>
 
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -90,7 +162,7 @@
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
     <script>
-        let dataTable; 
+        let dataTable;
 
         function loadData() {
             const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRvcrOwNXXon7ub2437NZh70H6rkwxqBeS_x1QHJtzFHiS3EJ9Qk9ClY2p6GLzy2kNanEzK_MIyJW0T/pub?gid=1224553793&single=true&output=csv&t=" + new Date().getTime();
@@ -114,55 +186,95 @@
                     if ($.fn.DataTable.isDataTable('#statusTable')) {
                         dataTable.destroy();
                         $('#statusTable tbody').empty();
-                        $('#statusTable tfoot th').empty();
-                    } 
-                    
+                    }
+
                     dataTable = $('#statusTable').DataTable({
-                        dom: 'lBfrtip',
+                        dom: 'lfrtiBp',
                         buttons: ['excelHtml5'],
                         lengthMenu: [
-                            [10, 20, -1], 
-                            ['10 แถว', '20 แถว', 'แสดงทั้งหมด']
+                            [10, 20, 30, -1],
+                            ['10 แถว', '20 แถว', '30 แถว', 'แสดงทั้งหมด']
                         ],
                         language: {
-                            search: "ค้นหา:", 
-                            lengthMenu: "แสดง _MENU_ แถว", 
+                            search: "ค้นหา:",
+                            lengthMenu: "แสดง _MENU_ แถว",
                             info: "แสดง _START_ ถึง _END_ จาก _TOTAL_ แถว",
                             zeroRecords: "ไม่พบข้อมูล",
                             paginate: { first: "หน้าแรก", last: "หน้าสุดท้าย", next: "ถัดไป", previous: "ก่อนหน้า" }
                         },
                         data: processedData,
                         rowCallback: function(row, data, index) {
-                            const status = data[3]; 
-                            $(row).addClass("status-" + status);
+                            const status = data[3]; // สถานะงาน
+
+                            const statusCell = $('td:eq(3)', row);
+                            // ลบ class สีตัวอักษรเดิมทั้งหมดที่อาจจะมี
+                            statusCell.removeClass('status-text-red status-text-yellow status-text-blue status-text-green status-text-purple');
+                            
+                            // ลบ class สีพื้นหลังของแถวออก (ที่เคยถูกเพิ่มในเวอร์ชันเก่า)
+                            $(row).removeClass(function(index, className) {
+                                return (className.match(/(^|\s)status-\S+/g) || []).join(' ');
+                            });
+
+
+                            // กำหนดสีตัวอักษรตามสถานะงาน
+                            switch (status) {
+                                case 'ส่งเข้าระบบซ้ำกัน':
+                                case 'ตรวจสอบไม่ผ่าน':
+                                case 'ตรวจประเมินไม่ผ่าน':
+                                case 'ตรวจติดตามไม่ผ่าน':
+                                    statusCell.addClass('status-text-red');
+                                    break;
+                                case 'รอตรวจสอบ':
+                                case 'วางบิล':
+                                    statusCell.addClass('status-text-yellow');
+                                    break;
+                                case 'ตรวจสอบผ่าน':
+                                case 'ตรวจติดตามผ่าน':
+                                case 'ตรวจประเมินผ่าน':
+                                case 'อนุมัติจัดพิมพ์':
+                                case 'จ่ายเงิน': // ย้าย 'จ่ายเงิน' ไปอยู่กับสีเขียว
+                                    statusCell.addClass('status-text-blue');
+                                    break;
+                                case 'ปิดโครงการ': // เปลี่ยน 'ปิดโครงการ' เป็นสีเขียว
+                                    statusCell.addClass('status-text-green');
+                                    break;
+                                case 'อยู่ระหว่างตรวจ': // เปลี่ยน 'อยู่ระหว่างตรวจ' เป็นสีม่วง
+                                    statusCell.addClass('status-text-purple');
+                                    break;
+                            }
                         },
                         initComplete: function () {
-                            this.api().columns().every(function () {
+                            const api = this.api();
+
+                            api.columns().every(function () {
                                 const column = this;
                                 const columnIndex = column.index();
-                                let filterElement;
+                                const filterElement = $('#filterCol' + columnIndex);
 
-                                if (columnIndex === 2 || columnIndex === 3) { 
-                                    filterElement = $('<select><option value="">--เลือก--</option></select>')
-                                        .appendTo($(column.footer()).empty())
-                                        .on('change', function () {
-                                            const val = $.fn.dataTable.util.escapeRegex($(this).val());
-                                            column.search(val ? '^' + val + '$' : '', true, false).draw();
-                                        });
+                                if (filterElement.is('select')) {
+                                    filterElement.empty().append('<option value="">--เลือก--</option>');
 
                                     column.data().unique().sort().each(function (d, j) {
                                         filterElement.append('<option value="' + d + '">' + d + '</option>');
                                     });
-                                } else { 
-                                    filterElement = $('<input type="text" placeholder="ค้นหา ' + $(column.header()).text() + '" />')
-                                        .appendTo($(column.footer()).empty())
-                                        .on('keyup change', function () {
-                                            if (column.search() !== this.value) {
-                                                column.search(this.value).draw();
-                                            }
-                                        });
+
+                                    filterElement.on('change', function () {
+                                        const val = $(this).val();
+                                        column.search(val ? '^' + $.fn.dataTable.util.escapeRegex(val) + '$' : '', true, false).draw();
+                                    });
                                 }
                             });
+
+                            // Preserve filter state after reload
+                            api.columns().every(function () {
+                                const columnIndex = this.index();
+                                const filterElement = $('#filterCol' + columnIndex);
+                                const savedFilterValue = filterElement.val();
+                                if (savedFilterValue) {
+                                    this.search('^' + $.fn.dataTable.util.escapeRegex(savedFilterValue) + '$', true, false);
+                                }
+                            });
+                            api.draw();
                         }
                     });
                 })
@@ -170,8 +282,8 @@
         }
 
         $(document).ready(function() {
-            loadData(); 
-            setInterval(loadData, 300000); 
+            loadData();
+            setInterval(loadData, 300000); // รีโหลดข้อมูลทุก 5 นาที (300000 มิลลิวินาที)
         });
     </script>
 </body>
