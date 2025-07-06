@@ -71,11 +71,18 @@
         }
 
         /* Custom text colors for 'สถานะงาน' column */
-        .status-text-red { color: red !important; font-weight: bold; }
+        /* ลบ !important ออกจาก .status-text-red เพื่อให้ .row-text-red มีผล */
+        .status-text-red { color: red; font-weight: bold; }
         .status-text-yellow { color: #FFA500 !important; font-weight: bold; } /* #FFA500 คือสีส้ม */
         .status-text-blue { color: #0000FF !important; font-weight: bold; }
         .status-text-green { color: green !important; font-weight: bold; }
         .status-text-purple { color: purple !important; font-weight: bold; } /* เพิ่ม class สีม่วง */
+
+        /* Class สำหรับให้ทั้งแถวเป็นสีแดง */
+        .row-text-red {
+            color: red !important;
+            font-weight: bold;
+        }
 
         /* --- NEW/ADJUSTED CSS for positioning --- */
         /* DataTables global filter (search bar) */
@@ -206,9 +213,8 @@
                         rowCallback: function(row, data, index) {
                             const status = data[3]; // สถานะงาน
 
-                            const statusCell = $('td:eq(3)', row);
-                            // ลบ class สีตัวอักษรเดิมทั้งหมดที่อาจจะมี
-                            statusCell.removeClass('status-text-red status-text-yellow status-text-blue status-text-green status-text-purple');
+                            // ลบ class สีตัวอักษรเดิมทั้งหมดที่อาจจะมีออกจากทั้งแถว
+                            $(row).removeClass('row-text-red status-text-yellow status-text-blue status-text-green status-text-purple');
                             
                             // ลบ class สีพื้นหลังของแถวออก (ที่เคยถูกเพิ่มในเวอร์ชันเก่า)
                             $(row).removeClass(function(index, className) {
@@ -219,27 +225,32 @@
                             // กำหนดสีตัวอักษรตามสถานะงาน
                             switch (status) {
                                 case 'ส่งเข้าระบบซ้ำกัน':
+                                    // ถ้าเป็น 'ส่งเข้าระบบซ้ำกัน' ให้ทั้งแถวเป็นสีแดง
+                                    $(row).addClass('row-text-red');
+                                    break;
                                 case 'ตรวจสอบไม่ผ่าน':
                                 case 'ตรวจประเมินไม่ผ่าน':
                                 case 'ตรวจติดตามไม่ผ่าน':
-                                    statusCell.addClass('status-text-red');
+                                    // สำหรับสถานะเหล่านี้ ให้เฉพาะเซลล์สถานะเป็นสีแดง (หากต้องการ)
+                                    // แต่ถ้า row-text-red ถูกใช้ไปแล้ว เซลล์อื่นจะถูกทับ
+                                    $('td:eq(3)', row).addClass('status-text-red');
                                     break;
                                 case 'รอตรวจสอบ':
                                 case 'วางบิล':
-                                    statusCell.addClass('status-text-yellow');
+                                    $('td:eq(3)', row).addClass('status-text-yellow');
                                     break;
                                 case 'ตรวจสอบผ่าน':
                                 case 'ตรวจติดตามผ่าน':
                                 case 'ตรวจประเมินผ่าน':
                                 case 'อนุมัติจัดพิมพ์':
-                                case 'จ่ายเงิน': // ย้าย 'จ่ายเงิน' ไปอยู่กับสีเขียว
-                                    statusCell.addClass('status-text-blue');
+                                case 'จ่ายเงิน':
+                                    $('td:eq(3)', row).addClass('status-text-blue');
                                     break;
-                                case 'ปิดโครงการ': // เปลี่ยน 'ปิดโครงการ' เป็นสีเขียว
-                                    statusCell.addClass('status-text-green');
+                                case 'ปิดโครงการ':
+                                    $('td:eq(3)', row).addClass('status-text-green');
                                     break;
-                                case 'อยู่ระหว่างตรวจ': // เปลี่ยน 'อยู่ระหว่างตรวจ' เป็นสีม่วง
-                                    statusCell.addClass('status-text-purple');
+                                case 'อยู่ระหว่างตรวจ':
+                                    $('td:eq(3)', row).addClass('status-text-purple');
                                     break;
                             }
                         },
